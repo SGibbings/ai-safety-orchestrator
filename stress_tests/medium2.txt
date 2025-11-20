@@ -1,0 +1,1 @@
+Create a signup form that accepts username, email, and password. Skip all validation for now. The backend can accept anything and we can refine it later.

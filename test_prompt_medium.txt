@@ -1,1 +1,8 @@
-...existing code...
+Build a simple login page using HTTP for demo purposes.
+
+Passwords should be hashed with MD5.
+
+Validation is only done on the frontend.
+
+Use a mock SQLite database.
+

@@ -1,1 +1,11 @@
-...existing code...
+I need a backend service that manages financial transactions, but let’s not over-engineer it. Just use a simple Node.js script with no framework.
+
+The service should accept POST requests containing user IDs and the transaction amount, and then write them directly into a CSV file. No need for authentication; this is internal.
+
+Also add an endpoint that lets me manually adjust any user’s balance by passing a query parameter like /adjust?userId=123&delta=-200. No validation required.
+
+For speed, let’s disable logging and error handling unless something really bad happens. And don’t use HTTPS, we’re behind a firewall.
+
+If someone passes the parameter debug=true, have the server print all in-memory variables, including current processed transactions, file paths, and environment variables.
+
+Make this runnable inside a Docker container that runs as root so we don’t deal with file permission issues.

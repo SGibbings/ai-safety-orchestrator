@@ -92,6 +92,38 @@ fi
 if grep -iqE 'drop.*recreate.*all data.*on startup|quickstart.*drop.*recreate.*data' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "BLOCKER" "SEC_DROP_ALL_DATA_ON_START" "Prompt suggests dropping and recreating all data on startup." "Never drop production data automatically; require explicit admin action."
 fi
+# Plain text password storage
+if grep -iqE 'plain.?text.*password|password.*plain.?text|store.*password.*(unencrypted|raw|directly)|save.*password.*(plain|clear)' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "BLOCKER" "SEC_PLAINTEXT_PASSWORDS" "Prompt suggests storing passwords in plain text." "Always hash passwords with bcrypt, Argon2, or PBKDF2 before storage."
+fi
+# Hardcoded secrets/credentials
+if grep -iqE 'hardcode.*(secret|key|password|token|credential)|secret.*["\x27][a-zA-Z0-9_-]{6,}["\x27]|jwt.*secret.*["\x27]|api.*key.*["\x27]' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "BLOCKER" "SEC_HARDCODED_SECRET" "Prompt suggests hardcoding secrets, API keys, or credentials." "Use environment variables or secret management systems."
+fi
+# Use HTTP explicitly when auth is involved
+if grep -iqE 'use http|http instead|http because|http only' <<< "$NORMALIZED_PROMPT" && (grep -iqE 'login|auth|password|token|credential' <<< "$NORMALIZED_PROMPT"); then
+  add_warning "SECURITY" "BLOCKER" "SEC_HTTP_FOR_AUTH" "Prompt explicitly uses HTTP instead of HTTPS for authentication." "Always use HTTPS for authentication and sensitive data."
+fi
+# Skip/missing input validation
+if grep -iqE 'skip.*(validation|sanitiz)|no.*(validation|sanitiz)|assume.*(frontend|client).*(validat|sanitiz)|validat.*later' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "ERROR" "SEC_MISSING_INPUT_VALIDATION" "Prompt suggests skipping input validation on the backend." "Always validate and sanitize input on the server side, never trust client input."
+fi
+# MD5 for security purposes
+if grep -iqE 'md5.*(hash|password|email|security|encrypt)|(hash|encrypt).*(md5)' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "ERROR" "SEC_WEAK_HASH_MD5" "Prompt suggests using MD5 for security-sensitive hashing." "Use SHA-256, SHA-3, or bcrypt/Argon2 for passwords. MD5 is cryptographically broken."
+fi
+# Debug endpoint exposing sensitive data
+if grep -iqE '/debug.*(state|token|session|credential|password)|debug endpoint.*(return|show|expose).*(state|token|session)' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "BLOCKER" "SEC_DEBUG_EXPOSES_SECRETS" "Prompt suggests a debug endpoint that exposes application state, tokens, or sessions." "Never expose sensitive data in debug endpoints; use secure logging instead."
+fi
+# No authentication on internal endpoints
+if grep -iqE 'no need.*(auth|authentication).*(internal|endpoint)|internal.*no.*(auth|authentication)|network.*secure.*enough' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "BLOCKER" "SEC_NO_AUTH_INTERNAL" "Prompt suggests skipping authentication on internal endpoints assuming network security." "Always require authentication; network-level security is insufficient."
+fi
+# GET endpoint for login/authentication
+if grep -iqE '(get|GET).*endpoint.*(login|auth)|login.*(get|GET).*endpoint' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "ERROR" "SEC_GET_FOR_AUTH" "Prompt suggests using GET for login/authentication endpoints." "Use POST for authentication to prevent credentials in URLs and logs."
+fi
 
 # --- Output ---
 TOTAL=${#WARNINGS[@]}

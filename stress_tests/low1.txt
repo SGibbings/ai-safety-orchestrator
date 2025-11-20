@@ -1,0 +1,1 @@
+Write a function in Python that takes a list of numbers and returns the average. No external dependencies and no network calls needed.

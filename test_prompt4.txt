@@ -1,1 +1,9 @@
-...existing code...
+Build me a single microservice that handles image uploads, user login, and does some machine learning predictions. Use either Flask or Next.js depending on which one has better file upload support.
+
+Store uploaded images in a /tmp folder on the server. It’s fine if they stay there between restarts. Also make sure users can download any image by ID without authentication because it's just internal.
+
+For the machine learning model, download a pre-trained model from a public Google Drive link and load it at runtime. Also add a cron job that retrains it using user images every few hours.
+
+Use SQLite or DynamoDB, whichever has fewer setup steps. Also don’t worry about HTTPS right now, we can set that up later.
+
+Finally, expose everything on port 80 and make sure the API returns stack traces directly in the response so I can debug faster.

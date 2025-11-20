@@ -1,0 +1,1 @@
+Create a JavaScript utility that formats a timestamp into human readable form. It should not access any external API or store any credentials.

@@ -1,1 +1,13 @@
-...existing code...
+Build a small internal analytics dashboard for viewing user activity metrics.
+
+Use Python with FastAPI for the backend. All endpoints should require authentication except one: a /metrics endpoint that returns aggregated counts (total users, monthly active users, etc.). It's okay if this one is public since it doesn't expose personal data.
+
+Store user activity logs in PostgreSQL. Use environment variables for all config except the database password, which you can hard-code for now during development.
+
+Enable a /debug-stats endpoint that returns the last 100 processed events, including user IDs, timestamps, and event types, but do NOT include raw payloads.
+
+HTTPS will be added later, so for now just expose everything over HTTP while behind VPN.
+
+Include minimal tests: only test the health check and one metrics endpoint.
+
+No need to add rate limiting yet; usage is low.

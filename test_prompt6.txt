@@ -1,1 +1,20 @@
-...existing code...
+We need a distributed authentication and data processing system. Use Kubernetes, but please also include a standalone mode so it runs without Kubernetes too.
+
+The authentication component should accept OAuth tokens, JWTs, or raw username/password combos—whichever the client sends. If the password is wrong, return the full stack trace so the QA team can debug.
+
+Store secrets either in plain environment variables or in a config.json file in the repo root. We can encrypt later.
+
+The data processing service should consume messages from Kafka, RabbitMQ, or Redis Pub/Sub. Don’t worry about which—we will decide during deployment. Just implement all three listeners in the same container.
+
+For storage, support MySQL, Cassandra, and Neo4j in the same codebase. The service should choose the database at runtime by checking which connection works first.
+
+If any service fails to start, just retry in a loop every 2 seconds indefinitely. No need for alarms.
+
+Finally, add a /debug endpoint that dumps:
+- current user session tokens
+- connection strings
+- database credentials
+- internal environment variables
+- and the last 10 incoming messages
+
+No authentication needed; this is only for internal use behind Kubernetes.

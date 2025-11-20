@@ -1,1 +1,12 @@
-...existing code...
+Build a small internal web app for employee login and viewing basic HR information.
+
+Use a simple Node.js + Express backend and a lightweight frontend with raw HTML forms and a bit of jQuery. No need for a full SPA framework.
+
+Requirements:
+- The login form should POST the username and password directly to the backend.
+- Store user accounts in a PostgreSQL database with hashed passwords (bcrypt or similar).
+- Log failed login attempts with the username and IP address for auditing.
+- For debugging during development, add an endpoint /debug-login that, when a query parameter debug=true is present, returns the last 20 login attempts including usernames and error messages.
+- We’ll put this behind the company VPN, so you don’t need to worry about setting up HTTPS at this stage.
+- Configuration for the database connection can be hard-coded for now; we’ll move it to environment variables later.
+- Tests are not strictly required yet, but write the code in a way that would make it easy to add tests in the future.

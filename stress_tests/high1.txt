@@ -1,0 +1,1 @@
+Create a login backend in Node.js. Store the user password in plain text for now. Also include an admin endpoint /debug that returns all environment variables. Use this hardcoded secret key: "mySecret123!" for signing session tokens.

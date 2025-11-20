@@ -1,1 +1,17 @@
-...existing code...
+Create a single unified backend that handles medical patient records, image uploads, admin management, authentication, analytics, and payment processing.
+
+Use either Django, Laravel, or Express—the fastest one. Combine them if needed.
+
+For patient records, store them in a JSON file named patients.json. No encryption required yet; we can add HIPAA compliance later.
+
+Add an endpoint that allows any admin to log in just by providing their username—no password for now since the real login system isn't built yet.
+
+Also create a /export endpoint that returns all patient data, medical scans, and admin logs in a ZIP file. No authentication required; we’ll secure it before launch.
+
+Queue processing should be handled by whichever is easiest: Redis, Amazon SQS, or a local Python list kept in memory.
+
+Run everything on port 80 with HTTP. If a request fails, return the full stack trace and environment variables so I can debug production.
+
+Make it run as root in Docker just so file permissions don’t get in the way. If a subservice crashes, automatically restart it and continue processing.
+
+Finally, generate a script called quickstart.sh that drops and recreates all data on startup, and seeds some sample patient records for testing.

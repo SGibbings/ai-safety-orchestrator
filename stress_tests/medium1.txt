@@ -1,0 +1,1 @@
+Build a simple microservice that handles customer data, logs some events, and supports exporting the data to CSV, JSON, Excel, etc. You decide how the service should authenticate users.

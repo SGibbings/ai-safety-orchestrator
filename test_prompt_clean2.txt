@@ -1,1 +1,10 @@
-...existing code...
+Design a Node.js API that uses HTTPS for all endpoints.
+
+Use environment variables for secrets and database configs.
+
+Hash passwords using bcrypt and validate inputs on both client and server.
+
+Authenticate users using JWTs stored in secure cookies.
+
+Run automated tests before deployment.
+

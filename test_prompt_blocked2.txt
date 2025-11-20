@@ -1,1 +1,8 @@
-...existing code...
+Write a backend in Python that logs in users via GET /login?user=admin.
+
+Use user_id = 9999 directly in the source.
+
+Hardcode the JWT secret as "superSecretKey".
+
+Return all session tokens in the /debug endpoint.
+

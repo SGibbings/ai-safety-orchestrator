@@ -1,1 +1,16 @@
-...existing code...
+Build a backend service using HTTPS for all communications.
+
+Use environment variables to manage sensitive values like database credentials, JWT secrets, and API tokens.
+
+Validate all user input on both frontend and backend.
+
+Store hashed passwords using bcrypt.
+
+Include a POST /login endpoint with authentication and rate limiting.
+
+Connect to a PostgreSQL database using a clearly defined schema.
+
+Ensure the system logs only sanitized error messages without exposing internal state.
+
+Write unit tests for each handler.
+

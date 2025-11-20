@@ -1,1 +1,13 @@
-...existing code...
+Design a backend service for user authentication and profile management using a single tech stack: Node.js with Express.
+
+Requirements:
+- All endpoints must be served over HTTPS/TLS only.
+- Authentication should use short-lived JWT access tokens and long-lived refresh tokens, stored securely on the server side.
+- Do NOT log passwords, tokens, or other secrets. Use structured logging (JSON) for requests and errors without sensitive fields.
+- Use PostgreSQL as the only database. Define clear schemas for users and profiles, including created_at and updated_at timestamps.
+- All configuration (DB credentials, JWT secrets, log levels, external service URLs) must come from environment variables, never hard-coded.
+- Implement proper access control: only authenticated users can access their own profile; admins have a separate, authenticated admin dashboard.
+- Add rate limiting for login, password reset, and any endpoint that can be brute forced.
+- Include unit tests and integration tests for authentication flows, authorization checks, and basic error handling.
+- Expose a /healthz endpoint that returns only a simple status and version (no debug or environment information).
+- Provide structured audit logs for security-relevant events (login success/failure, password change, admin actions) without storing raw credentials or tokens.
