@@ -113,7 +113,7 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>🛡️ AI Safety Orchestrator</h1>
+        <h1>AI Safety Orchestrator</h1>
         <p className="subtitle">Analyze developer prompts for security issues</p>
       </header>
 
@@ -182,7 +182,7 @@ function App() {
                 
                 {result.devspec_findings.length === 0 && (!result.guidance || result.guidance.length === 0) ? (
                   <div className="no-issues">
-                    ✅ No security issues detected! The prompt is safe to use.
+                    No security issues detected. The prompt is safe to use.
                   </div>
                 ) : (
                   <div className="combined-issues-container">
@@ -198,12 +198,6 @@ function App() {
                             return (
                               <div key={severity} className="severity-group">
                                 <div className={`severity-header severity-${severity.toLowerCase()}`}>
-                                  <span className="severity-icon">
-                                    {severity === 'BLOCKER' && '🔴'}
-                                    {severity === 'ERROR' && '🟠'}
-                                    {severity === 'WARNING' && '🟡'}
-                                    {severity === 'INFO' && '🟢'}
-                                  </span>
                                   <span className="severity-label">{severity}</span>
                                   <span className="severity-count">({findings.length})</span>
                                 </div>
@@ -214,7 +208,7 @@ function App() {
                                       <div className="finding-code">{finding.code}</div>
                                       <div className="finding-message">{finding.message}</div>
                                       <div className="finding-suggestion">
-                                        <strong>💡 Suggestion:</strong> {finding.suggestion}
+                                        <strong>Suggestion:</strong> {finding.suggestion}
                                       </div>
                                     </div>
                                   ))}
@@ -233,7 +227,7 @@ function App() {
                         <div className="guidance-list">
                           {result.guidance.map((item, idx) => (
                             <div key={idx} className="guidance-item">
-                              <div className="guidance-title">💡 {item.title}</div>
+                              <div className="guidance-title">{item.title}</div>
                               <div className="guidance-detail">{item.detail}</div>
                             </div>
                           ))}
@@ -256,7 +250,6 @@ function App() {
 
           {!result && !error && (
             <div className="placeholder">
-              <div className="placeholder-icon">🔍</div>
               <p>Enter a prompt and click "Analyze Prompt" to see results</p>
             </div>
           )}
