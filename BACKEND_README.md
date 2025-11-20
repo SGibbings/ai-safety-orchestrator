@@ -1,4 +1,4 @@
-# AI Safety Orchestrator - Backend API
+# SpecAlign - Backend API
 
 A FastAPI-based backend that orchestrates security analysis for AI-assisted development prompts.
 

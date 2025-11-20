@@ -1,4 +1,4 @@
-# AI Safety Orchestrator
+# SpecAlign
 
 A comprehensive security analysis system for AI-assisted development that uses the Dev Spec Kit (extracted from claude-code) as a component, wrapped with additional guidance and a modern web interface.
 

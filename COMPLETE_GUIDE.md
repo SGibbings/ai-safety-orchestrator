@@ -1,8 +1,8 @@
-# AI Safety Orchestrator - Complete System Documentation
+# SpecAlign - Complete System Documentation
 
-## 🎉 System Overview
+## System Overview
 
-The AI Safety Orchestrator is now **fully operational** with:
+SpecAlign is now **fully operational** with:
 
 ✅ **Backend API** (FastAPI + Python)
 ✅ **Frontend UI** (React + Dark Theme)

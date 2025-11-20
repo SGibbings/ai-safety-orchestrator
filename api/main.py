@@ -1,5 +1,5 @@
 """
-FastAPI application for the AI Safety Orchestrator.
+FastAPI application for SpecAlign.
 
 This API provides endpoints to:
 - Analyze developer prompts for security issues
@@ -19,7 +19,7 @@ from orchestrator.pipeline import analyze_prompt
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="AI Safety Orchestrator",
+    title="SpecAlign",
     description="Orchestrates security analysis and prompt curation for AI-assisted development",
     version="1.0.0"
 )
@@ -38,7 +38,7 @@ app.add_middleware(
 async def root():
     """Root endpoint with API information."""
     return {
-        "service": "AI Safety Orchestrator",
+        "service": "SpecAlign",
         "version": "1.0.0",
         "status": "operational",
         "endpoints": {

@@ -1,4 +1,4 @@
-# AI Safety Orchestrator - Backend Setup Complete ✅
+# SpecAlign - Backend Setup Complete
 
 ## What Was Built
 

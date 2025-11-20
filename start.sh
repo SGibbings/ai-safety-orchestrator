@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Startup script for AI Safety Orchestrator (Backend + Frontend)
+# Startup script for SpecAlign (Backend + Frontend)
 
 set -e
 
@@ -10,7 +10,7 @@ NC='\033[0m' # No Color
 
 echo -e "${PURPLE}"
 echo "╔════════════════════════════════════════════════╗"
-echo "║   🛡️  AI Safety Orchestrator - Startup       ║"
+echo "║          SpecAlign - Startup                   ║"
 echo "╚════════════════════════════════════════════════╝"
 echo -e "${NC}"
 

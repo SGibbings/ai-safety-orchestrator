@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Management script for the AI Safety Orchestrator API server
+# Management script for the SpecAlign API server
 
 set -e
 
@@ -18,7 +18,7 @@ start_server() {
         fi
     fi
     
-    echo "Starting AI Safety Orchestrator API server..."
+    echo "Starting SpecAlign API server..."
     cd "$(dirname "$0")"
     
     # Start the server in the background
@@ -118,7 +118,7 @@ case "${1:-}" in
         show_logs
         ;;
     *)
-        echo "AI Safety Orchestrator Server Management"
+        echo "SpecAlign Server Management"
         echo ""
         echo "Usage: $0 {start|stop|restart|status|logs}"
         echo ""

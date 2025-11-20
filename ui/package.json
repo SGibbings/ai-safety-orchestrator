@@ -1,7 +1,7 @@
 {
-  "name": "ai-safety-orchestrator-ui",
+  "name": "specalign-ui",
   "version": "1.0.0",
-  "description": "Frontend for the AI Safety Orchestrator - Dark themed React app with before/after UI",
+  "description": "Frontend for SpecAlign - Dark themed React app with before/after UI",
   "type": "module",
   "scripts": {
     "dev": "vite",

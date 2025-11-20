@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shutdown script for AI Safety Orchestrator
+# Shutdown script for SpecAlign
 
 set -e
 
@@ -9,7 +9,7 @@ NC='\033[0m' # No Color
 
 echo -e "${YELLOW}"
 echo "╔════════════════════════════════════════════════╗"
-echo "║   🛡️  AI Safety Orchestrator - Shutdown      ║"
+echo "║          SpecAlign - Shutdown                  ║"
 echo "╚════════════════════════════════════════════════╝"
 echo -e "${NC}"
 

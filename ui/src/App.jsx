@@ -113,7 +113,7 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>AI Safety Orchestrator</h1>
+        <h1>SpecAlign</h1>
         <p className="subtitle">Analyze developer prompts for security issues</p>
       </header>
 

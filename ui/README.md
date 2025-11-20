@@ -1,4 +1,4 @@
-# AI Safety Orchestrator - Frontend UI
+# SpecAlign - Frontend UI
 
 A sleek, dark-themed React application for analyzing developer prompts for security issues.
 
