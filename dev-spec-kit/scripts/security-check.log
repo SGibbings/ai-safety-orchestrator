@@ -1,1 +1,11 @@
-...existing code...
+[2025-11-19 20:38:12] Checking prompt: test_prompt.txt
+⚠️ Security Warning: Prompt contains 'http://' (insecure protocol). Consider using 'https://'.
+⚠️ Security Warning: Prompt references 'MD5' (weak hash function). Use SHA-256 or better.
+[2025-11-19 20:38:12] ❌ Issues found in test_prompt.txt
+[2025-11-19 20:39:09] Checking prompt: test_prompt_2.txt
+⚠️ Security Warning: Prompt contains 'http://' (insecure protocol). Consider using 'https://'.
+[2025-11-19 20:39:09] ❌ Issues found in test_prompt_2.txt
+[2025-11-19 20:43:45] Checking prompt: test_case.txt
+⚠️ Security Warning: Prompt contains 'http://' (insecure protocol). Consider using 'https://'.
+⚠️ Security Warning: Prompt references 'MD5' (weak hash function). Use SHA-256 or better.
+[2025-11-19 20:43:45] ❌ Issues found in test_case.txt

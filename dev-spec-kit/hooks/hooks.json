@@ -1,1 +1,9 @@
-...existing code...
+{
+  "hooks": [
+    {
+      "event": "UserPromptSubmit",
+      "handler": "./userpromptsubmit.sh",
+      "args": ["{promptFile}"]
+    }
+  ]
+}

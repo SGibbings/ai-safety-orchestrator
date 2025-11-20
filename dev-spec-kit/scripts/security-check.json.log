@@ -1,1 +1,5 @@
-...existing code...
+{
+  "timestamp": "2025-11-19T20:43:45Z",
+  "prompt_file": "test_case.txt",
+  "warnings": ["Prompt contains 'http://'.", "Prompt references 'MD5'."]
+}
