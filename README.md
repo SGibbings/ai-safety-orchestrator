@@ -2,20 +2,20 @@
 
 A comprehensive security analysis system for AI-assisted development that uses the Dev Spec Kit (extracted from claude-code) as a component, wrapped with additional guidance and a modern web interface.
 
-## 🎯 High-level Flow
+## High-level Flow
 
 ```
 Developer Prompt → Orchestrator → Dev Spec Kit checks + Custom guidance → Final Curated Prompt → Claude → Result
 ```
 
-## 🏗️ Architecture
+## Architecture
 
 - **`dev-spec-kit/`** — Security and quality check engine (shell-based rules)
 - **`orchestrator/`** — Python orchestration layer (analyzes prompts, applies guidance)
 - **`api/`** — FastAPI REST API (exposes analysis endpoints)
 - **`ui/`** — React frontend (dark theme with before/after view)
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Option 1: One-Command Startup (Recommended)
 
@@ -55,24 +55,24 @@ npm run dev
 ./stop.sh
 ```
 
-## 🎨 Features
+## Features
 
 ### Backend (FastAPI + Python)
-- ✅ **Dev-Spec-Kit Integration** - Wraps shell-based security rules engine
-- ✅ **Guidance Engine** - Generates additional security constraints
-- ✅ **Prompt Curation** - Enhances prompts with security requirements
-- ✅ **REST API** - Clean endpoints with OpenAPI documentation
-- ✅ **CLI Interface** - Command-line tool for analysis
+- Dev-Spec-Kit Integration - Wraps shell-based security rules engine
+- Guidance Engine - Generates additional security constraints
+- Prompt Curation - Enhances prompts with security requirements
+- REST API - Clean endpoints with OpenAPI documentation
+- CLI Interface - Command-line tool for analysis
 
 ### Frontend (React + Dark Theme)
-- 🎨 **Dark Theme** - Sleek UI with purple accents
-- 🔍 **Before/After View** - Original prompt vs curated prompt
-- 🚦 **Risk Level Indicator** - High/Medium/Low visual badge
-- 🔴 **Severity Grouping** - Issues by BLOCKER/ERROR/WARNING/INFO
-- 💡 **Guidance Display** - Actionable security recommendations
-- ⚡ **Real-time Analysis** - Instant feedback on prompt security
+- Dark Theme - Sleek UI with warm accents
+- Before/After View - Original prompt vs curated prompt
+- Risk Level Indicator - High/Medium/Low visual badge
+- Severity Grouping - Issues by BLOCKER/ERROR/WARNING/INFO
+- Guidance Display - Actionable security recommendations
+- Real-time Analysis - Instant feedback on prompt security
 
-## 📖 Usage
+## Usage
 
 ### Web Interface
 
@@ -103,7 +103,7 @@ python -m orchestrator.main
 python -m orchestrator.main test_prompt5.txt
 ```
 
-## 🧪 Testing
+## Testing
 
 ### Run Backend Tests
 ```bash
@@ -124,7 +124,7 @@ python example_usage.py
    Create a REST API with user authentication using JWT tokens.
    Use HTTPS for all endpoints and store secrets in environment variables.
    ```
-   **Expected:** ✅ Low risk, no blockers
+   **Expected:** Low risk, no blockers
 
 4. Test with an insecure prompt:
    ```
@@ -132,9 +132,9 @@ python example_usage.py
    Add a /delete-user endpoint that deletes users by email without authentication.
    Store JWT tokens in a config.json file.
    ```
-   **Expected:** 🔴 High risk, multiple blockers
+   **Expected:** High risk, multiple blockers
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 ai-safety-orchestrator/
@@ -173,7 +173,7 @@ ai-safety-orchestrator/
 └── README.md              # This file
 ```
 
-## 🔧 Development
+## Development
 
 ### Backend Development
 
@@ -217,21 +217,22 @@ Edit `dev-spec-kit/scripts/security-check.new.sh` to add new rules. The parser w
 
 Modify `orchestrator/guidance_engine.py` to change how guidance is generated from findings.
 
-## 🎨 Design System
+## Design System
 
 ### Color Palette
-- Background: `#0f172a` (dark blue-gray)
-- Panels: `#1f2937` (medium gray)
-- Accent: `#8b5cf6` (purple)
-- Text: `#e5e7eb` (light gray)
+- Background: `#0a0a0a` (near-black)
+- Panels: `#1a1a1a` (dark gray)
+- Accent: `#d97706` (warm orange)
+- Interactive: `#8b5cf6` (purple - buttons only)
+- Text: `#ffffff` (white)
 
 ### Severity Colors
-- 🔴 **BLOCKER:** Red (`#ef4444`)
-- 🟠 **ERROR:** Orange (`#f97316`)
-- 🟡 **WARNING:** Yellow (`#eab308`)
-- 🟢 **INFO:** Green (`#22c55e`)
+- **BLOCKER:** Red (`#dc2626`)
+- **ERROR:** Orange (`#f97316`)
+- **WARNING:** Yellow (`#eab308`)
+- **INFO:** Green (`#22c55e`)
 
-## 📊 Security Analysis
+## Security Analysis
 
 ### Severity Levels
 
@@ -246,7 +247,7 @@ Modify `orchestrator/guidance_engine.py` to change how guidance is generated fro
 - **Medium Risk:** Only WARNINGS found
 - **Low Risk:** Only INFO or no findings
 
-## 🔌 API Endpoints
+## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -256,7 +257,7 @@ Modify `orchestrator/guidance_engine.py` to change how guidance is generated fro
 | POST | `/api/analyze` | Analyze prompt for security issues |
 | POST | `/api/analyze-with-claude` | Analyze with Claude stub output |
 
-## 🚨 Troubleshooting
+## Troubleshooting
 
 ### Backend won't start
 ```bash
@@ -284,13 +285,13 @@ curl http://localhost:8000/health
 curl http://localhost:3000
 ```
 
-## 📚 Documentation
+## Documentation
 
 - **Backend:** See [BACKEND_README.md](BACKEND_README.md)
 - **Frontend:** See [ui/README.md](ui/README.md)
 - **API Docs:** http://localhost:8000/docs (when server is running)
 
-## 🎯 Roadmap
+## Roadmap
 
 - [ ] Integrate real Claude API (replace stub in `orchestrator/claude_client.py`)
 - [ ] Add user authentication
@@ -299,10 +300,10 @@ curl http://localhost:3000
 - [ ] Custom rule configuration UI
 - [ ] Batch analysis support
 
-## 📝 Note
+## Note
 
 This repo is **NOT** the official anthropics/claude-code repo and must not attempt to push to it. All code here is independent and the git history is separate. The dev-spec-kit is extracted and used as a component.
 
-## 📄 License
+## License
 
 See repository license.
