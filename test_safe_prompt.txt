@@ -1,0 +1,23 @@
+Build a user-facing dashboard web app for an internal analytics team.
+
+Tech stack:
+
+Backend: Python (FastAPI)
+Frontend: React + TypeScript
+Database: PostgreSQL
+
+Requirements:
+
+Implement user authentication using OAuth2 with the company's SSO provider.
+All API endpoints must be behind authentication and role-based authorization (roles: viewer, analyst, admin).
+Viewer can only see dashboards shared with them.
+Analyst can create, edit, and delete dashboards they own.
+Admin can manage users and assign permissions.
+Use PostgreSQL for persistent storage with prepared statements to prevent SQL injection.
+All passwords must be hashed using bcrypt before storing in the database.
+Store secrets (database password, OAuth2 client secret) in environment variables, never in code.
+API must be served over HTTPS only.
+Implement proper input validation on all user inputs using Pydantic schemas.
+Log all authentication attempts and administrative actions.
+Use parameterized queries everywhere to prevent SQL injection.
+Include CORS configuration allowing only the frontend origin.
