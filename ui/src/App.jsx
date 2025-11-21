@@ -319,8 +319,8 @@ function App() {
                 )}
               </div>
 
-              {/* 2. Spec Breakdown (if spec-kit enabled and structure available) */}
-              {result.spec_kit_enabled && result.spec_kit_structure && (
+              {/* 2. Spec Breakdown (if structure available) */}
+              {result.spec_kit_structure && (
                 <div className="panel spec-breakdown-panel">
                   <div className="panel-header">
                     <h2>Spec Breakdown</h2>

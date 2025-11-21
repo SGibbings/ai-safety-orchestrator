@@ -348,7 +348,10 @@ def analyze_prompt(prompt: str, call_claude_api: bool = False) -> AnalysisRespon
     # Normalize the prompt (basic cleanup)
     normalized_prompt = prompt.strip()
     
-    # Step 0: Optionally run spec-kit first (additive layer)
+    # Step 0: Always extract spec structure and compute quality score
+    # This provides valuable feedback even without spec-kit CLI integration
+    from .spec_kit_adapter import extract_spec_structure
+    
     spec_kit_enabled = should_use_spec_kit()
     spec_kit_success = None
     spec_kit_raw_output = None
@@ -357,24 +360,31 @@ def analyze_prompt(prompt: str, call_claude_api: bool = False) -> AnalysisRespon
     spec_quality_warnings = []
     spec_quality_score = None
     
+    # Always extract spec structure and compute quality score
+    try:
+        structure = extract_spec_structure(normalized_prompt, "")
+        if structure:
+            spec_kit_structure = structure.model_dump()
+            
+            # Detect missing or weak spec areas
+            spec_quality_warnings = detect_missing_spec_areas(structure)
+            
+            # Compute spec quality score
+            spec_quality_score = compute_spec_quality_score(structure, spec_quality_warnings, normalized_prompt)
+    except Exception as e:
+        # Log but don't fail
+        import sys
+        print(f"WARNING: spec structure extraction failed: {e}", file=sys.stderr)
+    
+    # Optionally run spec-kit CLI (if enabled)
     if spec_kit_enabled:
         try:
             spec_adapter = get_adapter()
             if spec_adapter:
                 # Call spec-kit via adapter
-                spec_raw, spec_findings, spec_exit, structure = spec_adapter.analyze_prompt(normalized_prompt)
+                spec_raw, spec_findings, spec_exit, _ = spec_adapter.analyze_prompt(normalized_prompt)
                 spec_kit_success = True
                 spec_kit_raw_output = spec_raw
-                
-                # Extract structured spec elements
-                if structure:
-                    spec_kit_structure = structure.model_dump()
-                    
-                    # Detect missing or weak spec areas
-                    spec_quality_warnings = detect_missing_spec_areas(structure)
-                    
-                    # Compute spec quality score
-                    spec_quality_score = compute_spec_quality_score(structure, spec_quality_warnings, normalized_prompt)
                 
                 # Generate summary (spec-kit doesn't provide security findings)
                 if spec_findings:
