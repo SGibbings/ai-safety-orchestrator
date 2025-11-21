@@ -127,7 +127,7 @@ You can also use the CLI to analyze prompts:
 python -m orchestrator.main
 
 # From file
-python -m orchestrator.main test_prompt5.txt
+python -m orchestrator.main prompts/regression/test_prompt5.txt
 ```
 
 ### Testing
@@ -142,7 +142,7 @@ Or test individual prompts:
 
 ```bash
 # Test via CLI
-python -m orchestrator.main test_prompt5.txt
+python -m orchestrator.main prompts/regression/test_prompt5.txt
 
 # Test via API (requires server to be running)
 curl -X POST http://localhost:8000/api/analyze \

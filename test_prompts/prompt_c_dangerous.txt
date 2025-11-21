@@ -1,0 +1,10 @@
+I'm building a Go service handling file uploads and user accounts:
+
+- Inside-cluster HTTP only, no TLS enforcement.
+- Passwords hashed using SHA-256 + salt (not bcrypt/argon2).
+- Hardcoded default admin user in config.
+- JWT secret may be hardcoded in local config.
+- /debug/state returns last 50 uploaded filenames + user IDs.
+- File uploads stored on disk.
+
+Describe implementation and highlight risks.

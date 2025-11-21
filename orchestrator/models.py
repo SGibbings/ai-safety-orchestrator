@@ -25,6 +25,19 @@ class GuidanceItem(BaseModel):
     detail: str = Field(..., description="Detailed explanation or constraint")
 
 
+class SpecKitStructure(BaseModel):
+    """Structured representation of spec elements extracted from spec-kit."""
+    features: list[str] = Field(default_factory=list, description="Features or capabilities mentioned")
+    entities: list[str] = Field(default_factory=list, description="Entities, models, or data structures")
+    flows: list[str] = Field(default_factory=list, description="User flows, workflows, or processes")
+    configuration: list[str] = Field(default_factory=list, description="Configuration or environment settings")
+    error_handling: list[str] = Field(default_factory=list, description="Error handling or fallback strategies")
+    testing: list[str] = Field(default_factory=list, description="Testing strategies or test cases")
+    logging: list[str] = Field(default_factory=list, description="Logging or observability plans")
+    authentication: list[str] = Field(default_factory=list, description="Authentication or authorization mechanisms")
+    data_storage: list[str] = Field(default_factory=list, description="Data storage or persistence layer")
+
+
 class AnalysisResponse(BaseModel):
     """Complete analysis response including all stages of processing."""
     original_prompt: str = Field(..., description="The original input prompt")
@@ -38,3 +51,13 @@ class AnalysisResponse(BaseModel):
     has_blockers: bool = Field(default=False, description="Whether any BLOCKER issues were found")
     has_errors: bool = Field(default=False, description="Whether any ERROR issues were found")
     risk_level: str = Field(default="Low", description="Overall risk level: Low, Medium, or High")
+    
+    # Spec-kit integration fields (optional, backwards compatible)
+    spec_kit_enabled: bool = Field(default=False, description="Whether spec-kit was used in this analysis")
+    spec_kit_success: Optional[bool] = Field(default=None, description="Whether spec-kit call succeeded (None if not used)")
+    spec_kit_raw_output: Optional[str] = Field(default=None, description="Raw output from spec-kit (None if not used or failed)")
+    spec_kit_summary: Optional[str] = Field(default=None, description="Summary of spec-kit results (None if not used)")
+    spec_kit_structure: Optional[dict] = Field(default=None, description="Structured spec breakdown from spec-kit (None if not used)")
+    spec_quality_warnings: list[str] = Field(default_factory=list, description="Warnings about missing or weak spec areas")
+    spec_quality_score: Optional[int] = Field(default=None, ge=0, le=100, description="Spec quality score 0-100 (None if spec-kit not used)")
+

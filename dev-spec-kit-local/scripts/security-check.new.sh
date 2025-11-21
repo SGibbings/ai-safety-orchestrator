@@ -25,8 +25,8 @@ add_warning() {
 if grep -iqE 'delete.*user.*(without.*auth|no.*auth|no authentication|unauthenticated)' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "BLOCKER" "SEC_UNAUTH_DELETE" "Detected an endpoint that deletes users by email without authentication." "Require authenticated admin role and proper access control before deletion."
 fi
-if grep -iqE 'admin.*(auto-?create|regenerat|backdoor|without.*auth|no.*auth)' <<< "$NORMALIZED_PROMPT"; then
-  add_warning "SECURITY" "BLOCKER" "SEC_ADMIN_BACKDOOR" "Detected auto-creation or unauthenticated admin user." "Require secure admin creation with strong authentication."
+if grep -iqE 'admin.*(auto-?create|regenerat|backdoor|without.*auth|no.*auth|hardcoded|hard-coded|default|built-in)|(hardcoded|hard-coded|default|built-in).*(admin.*user|admin.*account)' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "BLOCKER" "SEC_ADMIN_BACKDOOR" "Detected hardcoded, default, or unauthenticated admin user." "Require secure admin creation with strong authentication."
 fi
 if grep -iqE 'JWT.*file|token.*file|save.*token.*json|store.*token.*json' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "BLOCKER" "SEC_INSECURE_JWT_STORAGE" "Prompt suggests storing JWTs or tokens in a file (e.g., JSON)." "Use secure server-side storage or a proper session store."
@@ -43,8 +43,11 @@ fi
 if grep -iqE 'raw html' <<< "$NORMALIZED_PROMPT" && grep -iqE 'jquery' <<< "$NORMALIZED_PROMPT" && grep -iqE 'login' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "ERROR" "SEC_INSECURE_LOGIN_UI" "Prompt uses raw HTML and jQuery for login/auth flows without secure handling." "Use secure frontend frameworks and implement CSRF protection and HTTPS."
 fi
-if (grep -iqE 'login' <<< "$NORMALIZED_PROMPT" || grep -iqE 'auth' <<< "$NORMALIZED_PROMPT" || grep -iqE 'jwt' <<< "$NORMALIZED_PROMPT" || grep -iqE 'token' <<< "$NORMALIZED_PROMPT" || grep -iqE 'password' <<< "$NORMALIZED_PROMPT") && ! grep -iqE 'https' <<< "$NORMALIZED_PROMPT" && ! grep -iqE 'tls' <<< "$NORMALIZED_PROMPT"; then
-  add_warning "SECURITY" "WARNING" "SEC_NO_TLS_FOR_AUTH" "No mention of HTTPS/TLS for authentication flows." "Always use HTTPS/TLS for login/auth endpoints."
+# Only flag if auth is mentioned AND there's explicit mention of HTTP without HTTPS
+if grep -iqE 'http://' <<< "$NORMALIZED_PROMPT" \
+  && (grep -iqE 'login|auth|jwt|token|password' <<< "$NORMALIZED_PROMPT") \
+  && ! grep -iqE 'https|tls|behind.*nginx|nginx.*handle.*tls|proxy.*handle.*https' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "WARNING" "SEC_NO_TLS_FOR_AUTH" "HTTP mentioned for authentication without HTTPS/TLS or reverse proxy." "Always use HTTPS/TLS for login/auth endpoints."
 fi
 # --- New rules for advanced prompts ---
 if grep -iqE 'download.*(image|file|content|data).*without authentication' <<< "$NORMALIZED_PROMPT"; then
@@ -96,25 +99,43 @@ fi
 if grep -iqE 'plain.?text.*password|password.*plain.?text|store.*password.*(unencrypted|raw|directly)|save.*password.*(plain|clear)' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "BLOCKER" "SEC_PLAINTEXT_PASSWORDS" "Prompt suggests storing passwords in plain text." "Always hash passwords with bcrypt, Argon2, or PBKDF2 before storage."
 fi
-# Hardcoded secrets/credentials
-if grep -iqE 'hardcode.*(secret|key|password|token|credential)|secret.*["\x27][a-zA-Z0-9_-]{6,}["\x27]|jwt.*secret.*["\x27]|api.*key.*["\x27]' <<< "$NORMALIZED_PROMPT"; then
+# Hardcoded secrets/credentials (only if NOT using env vars or secret management)
+if grep -iqE 'hardcode.*(secret|key|password|token|credential)|secret.*["\x27][a-zA-Z0-9_-]{6,}["\x27]|jwt.*secret.*["\x27]|api.*key.*["\x27]' <<< "$NORMALIZED_PROMPT" \
+  && ! grep -iqE 'environment variable|env var|secret manager|from env|getenv|process\.env|os\.environ' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "BLOCKER" "SEC_HARDCODED_SECRET" "Prompt suggests hardcoding secrets, API keys, or credentials." "Use environment variables or secret management systems."
 fi
 # Use HTTP explicitly when auth is involved
 if grep -iqE 'use http|http instead|http because|http only' <<< "$NORMALIZED_PROMPT" && (grep -iqE 'login|auth|password|token|credential' <<< "$NORMALIZED_PROMPT"); then
   add_warning "SECURITY" "BLOCKER" "SEC_HTTP_FOR_AUTH" "Prompt explicitly uses HTTP instead of HTTPS for authentication." "Always use HTTPS for authentication and sensitive data."
 fi
-# Skip/missing input validation
-if grep -iqE 'skip.*(validation|sanitiz)|no.*(validation|sanitiz)|assume.*(frontend|client).*(validat|sanitiz)|validat.*later' <<< "$NORMALIZED_PROMPT"; then
+# Skip/missing input validation (only if explicitly skipping, not just not mentioned)
+if grep -iqE 'skip (input )?validation|no (input )?validation|assume (input )?safe|trust (client|frontend) input|validation.*not needed' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "ERROR" "SEC_MISSING_INPUT_VALIDATION" "Prompt suggests skipping input validation on the backend." "Always validate and sanitize input on the server side, never trust client input."
 fi
 # MD5 for security purposes
 if grep -iqE 'md5.*(hash|password|email|security|encrypt)|(hash|encrypt).*(md5)' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "ERROR" "SEC_WEAK_HASH_MD5" "Prompt suggests using MD5 for security-sensitive hashing." "Use SHA-256, SHA-3, or bcrypt/Argon2 for passwords. MD5 is cryptographically broken."
 fi
-# Debug endpoint exposing sensitive data
-if grep -iqE '/debug.*(state|token|session|credential|password)|debug endpoint.*(return|show|expose).*(state|token|session)' <<< "$NORMALIZED_PROMPT"; then
-  add_warning "SECURITY" "BLOCKER" "SEC_DEBUG_EXPOSES_SECRETS" "Prompt suggests a debug endpoint that exposes application state, tokens, or sessions." "Never expose sensitive data in debug endpoints; use secure logging instead."
+# SHA-256 for password hashing (better than MD5 but worse than bcrypt/Argon2)
+# Check for SHA-256 being used for password hashing (not just mentioned as "not using it")
+if grep -iqE '(password|hash).*(using|with|use).*(sha-?256|sha256)|(sha-?256|sha256).*(for|to hash).*(password)' <<< "$NORMALIZED_PROMPT" \
+  || (grep -iqE 'sha-?256' <<< "$NORMALIZED_PROMPT" && grep -iqE 'password.*hash|hash.*password' <<< "$NORMALIZED_PROMPT" && ! grep -iqE 'not.*sha-?256|instead of.*sha-?256|don'\''t use.*sha-?256|avoid.*sha-?256' <<< "$NORMALIZED_PROMPT"); then
+  add_warning "SECURITY" "ERROR" "SEC_WEAK_PASSWORD_HASH_SHA256" "Prompt suggests using SHA-256 for password hashing." "Use bcrypt, Argon2, or PBKDF2 for password hashing. SHA-256 is too fast and vulnerable to brute-force attacks."
+fi
+# Debug endpoint exposing sensitive data (only actual secrets, not IDs/emails/filenames)
+# Pattern must match: /debug FOLLOWED BY "returns X" where X is a secret type
+# Use more restrictive matching to avoid false positives from "no raw tokens" mentions
+if grep -iqE '/debug[^ ]*\s+(return|returns|show|shows|expose|exposes|dump|dumps)\s+(all |the |last [0-9]+ )?(token|session|credential|password|secret|api.*key|jwt|env|environment)' <<< "$NORMALIZED_PROMPT" \
+  || grep -iqE 'debug endpoint\s+(return|returns|show|shows|expose|exposes|dump|dumps)\s+(all |the |last [0-9]+ )?(token|session|credential|password|secret|api.*key|jwt|env|environment)' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "BLOCKER" "SEC_DEBUG_EXPOSES_SECRETS" "Prompt suggests a debug endpoint that exposes tokens, credentials, passwords, or secrets." "Never expose sensitive data in debug endpoints; use secure logging instead."
+# Debug endpoint exposing PII (emails) - ERROR severity
+elif grep -iqE '/debug[^ ]*\s+(return|returns|show|shows|expose|exposes)\s+(all |the |last [0-9]+ )?email' <<< "$NORMALIZED_PROMPT" \
+  || grep -iqE 'debug.*(return|returns|show|shows|expose|exposes)\s+(all |the |last [0-9]+ )?email' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "ERROR" "SEC_DEBUG_EXPOSES_PII" "Prompt suggests a debug endpoint that exposes emails (PII)." "Never expose personally identifiable information in debug endpoints."
+# Debug endpoint exposing non-sensitive metadata (IDs, filenames) - WARNING only
+elif grep -iqE '/debug[^ ]*\s+(return|returns|show|shows|expose|exposes)\s+(all |the |last [0-9]+ )?(user|id|filename|file.*name)' <<< "$NORMALIZED_PROMPT" \
+  || grep -iqE 'debug.*(return|returns|show|shows|expose|exposes)\s+(all |the |last [0-9]+ )?(user|id|filename|file.*name)' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "WARNING" "SEC_DEBUG_EXPOSES_METADATA" "Prompt suggests a debug endpoint that exposes user IDs or filenames." "Minimize data exposure in debug endpoints and disable them in production."
 fi
 # No authentication on internal endpoints
 if grep -iqE 'no need.*(auth|authentication).*(internal|endpoint)|internal.*no.*(auth|authentication)|network.*secure.*enough' <<< "$NORMALIZED_PROMPT"; then

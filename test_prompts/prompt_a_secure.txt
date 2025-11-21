@@ -1,0 +1,15 @@
+This is a secure, well-specified service.
+
+I'm building a small backend service in Python (FastAPI) for managing user profiles in a multi-tenant SaaS product. I want this to be production-grade from a security standpoint.
+
+Requirements:
+- All requests go over HTTPS only; reject any non-HTTPS traffic.
+- OAuth2 / OIDC SSO for authentication with short-lived JWTs.
+- Secrets (JWT signing keys, DB URL) from environment variables only.
+- Use bcrypt or Argon2 for password hashing.
+- Do not log raw passwords, tokens, or API keys.
+- Use parameterized queries or ORM for DB access.
+- /health endpoint must not leak anything sensitive.
+- Include unit tests for password hashing + token validation.
+
+Describe structure and critical security checks.

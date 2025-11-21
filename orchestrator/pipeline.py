@@ -2,10 +2,130 @@
 Main orchestration pipeline that coordinates all components.
 """
 import re
-from .models import AnalysisResponse, DevSpecFinding
+from .models import AnalysisResponse, DevSpecFinding, SpecKitStructure
 from .devspec_runner import run_dev_spec_kit
 from .guidance_engine import build_guidance
 from .claude_client import call_claude
+
+
+def detect_missing_spec_areas(structure: SpecKitStructure) -> list[str]:
+    """
+    Detect missing or weak areas in the spec structure.
+    
+    This generates human-readable warnings for spec elements that are
+    missing or insufficiently defined, helping developers identify
+    gaps in their project specifications.
+    
+    Args:
+        structure: Extracted spec structure from the prompt
+        
+    Returns:
+        List of warning messages for missing/weak areas
+    """
+    warnings = []
+    
+    # Check for missing features
+    if not structure.features or len(structure.features) == 0:
+        warnings.append("No features or requirements explicitly defined. Consider specifying what the system should do.")
+    
+    # Check for missing entities
+    if not structure.entities or len(structure.entities) == 0:
+        warnings.append("No data models or entities identified. Consider defining what data structures are needed.")
+    
+    # Check for missing flows
+    if not structure.flows or len(structure.flows) == 0:
+        warnings.append("No user flows or workflows identified. Consider describing how users interact with the system.")
+    
+    # Check for missing error handling
+    if not structure.error_handling or len(structure.error_handling) == 0:
+        warnings.append("No error handling strategy mentioned. Consider how the system handles failures and edge cases.")
+    
+    # Check for missing testing strategy
+    if not structure.testing or len(structure.testing) == 0:
+        warnings.append("No testing strategy mentioned. Consider adding test plans, unit tests, or integration tests.")
+    
+    # Check for missing logging/monitoring
+    if not structure.logging or len(structure.logging) == 0:
+        warnings.append("No logging or monitoring mentioned. Consider how you'll track system behavior and debug issues.")
+    
+    # Check for authentication without proper definition
+    if structure.authentication and len(structure.authentication) > 0:
+        # Authentication mentioned but flows might be missing
+        if not structure.flows or not any('login' in f or 'auth' in f for f in structure.flows):
+            warnings.append("Authentication mentioned but login/auth flow not clearly defined.")
+    
+    # Check for data storage without configuration
+    if structure.data_storage and len(structure.data_storage) > 0:
+        if not structure.configuration or len(structure.configuration) == 0:
+            warnings.append("Data storage mentioned but configuration details (connection strings, env vars) not specified.")
+    
+    # Weak features (too vague)
+    if structure.features and len(structure.features) > 0:
+        vague_features = [f for f in structure.features if len(f.split()) < 3]
+        if len(vague_features) > len(structure.features) / 2:
+            warnings.append("Some features are vaguely defined. Consider adding more detail about what each feature should do.")
+    
+    return warnings
+
+
+def compute_spec_quality_score(structure: SpecKitStructure, warnings: list[str]) -> int:
+    """
+    Compute a spec quality score from 0-100 based on completeness.
+    
+    Higher scores indicate more complete and well-structured specs.
+    This is descriptive (how complete the spec is), not prescriptive
+    (doesn't affect security risk level).
+    
+    Args:
+        structure: Extracted spec structure
+        warnings: List of quality warnings
+        
+    Returns:
+        Score from 0-100
+    """
+    score = 100
+    
+    # Deduct points for each empty critical category (8 points each)
+    critical_categories = [
+        ('features', structure.features),
+        ('entities', structure.entities),
+        ('flows', structure.flows),
+        ('error_handling', structure.error_handling),
+        ('testing', structure.testing)
+    ]
+    
+    for name, category in critical_categories:
+        if not category or len(category) == 0:
+            score -= 10
+    
+    # Deduct points for each empty important category (6 points each)
+    important_categories = [
+        ('configuration', structure.configuration),
+        ('logging', structure.logging),
+        ('authentication', structure.authentication),
+        ('data_storage', structure.data_storage)
+    ]
+    
+    for name, category in important_categories:
+        if not category or len(category) == 0:
+            score -= 6
+    
+    # Deduct points for each warning (5 points each, max 25 points)
+    warning_penalty = min(len(warnings) * 5, 25)
+    score -= warning_penalty
+    
+    # Bonus for having all critical categories populated
+    all_critical_populated = all(cat and len(cat) > 0 for _, cat in critical_categories)
+    if all_critical_populated:
+        score += 10
+    
+    # Bonus for having comprehensive coverage (7+ categories with content)
+    populated_count = sum(1 for _, cat in (critical_categories + important_categories) if cat and len(cat) > 0)
+    if populated_count >= 7:
+        score += 5
+    
+    # Clamp to 0-100 range
+    return max(0, min(100, score))
 
 
 def filter_false_positives(prompt: str, findings: list[DevSpecFinding]) -> list[DevSpecFinding]:
@@ -145,10 +265,11 @@ def analyze_prompt(prompt: str, call_claude_api: bool = False) -> AnalysisRespon
     Run the complete analysis pipeline on a developer prompt.
     
     This orchestrates:
-    1. Dev-spec-kit security analysis
-    2. Guidance generation
-    3. Prompt curation
-    4. Optional Claude API call
+    1. [Optional] Spec-kit workflow analysis (if USE_SPEC_KIT=true)
+    2. Dev-spec-kit security analysis (ALWAYS runs)
+    3. Guidance generation
+    4. Prompt curation
+    5. Optional Claude API call
     
     Args:
         prompt: The raw developer prompt to analyze
@@ -157,10 +278,55 @@ def analyze_prompt(prompt: str, call_claude_api: bool = False) -> AnalysisRespon
     Returns:
         AnalysisResponse with complete analysis results
     """
+    # Import spec-kit adapter (only needed if enabled)
+    from .spec_kit_adapter import should_use_spec_kit, get_adapter
+    
     # Normalize the prompt (basic cleanup)
     normalized_prompt = prompt.strip()
     
-    # Step 1: Run dev-spec-kit security checks
+    # Step 0: Optionally run spec-kit first (additive layer)
+    spec_kit_enabled = should_use_spec_kit()
+    spec_kit_success = None
+    spec_kit_raw_output = None
+    spec_kit_summary = None
+    spec_kit_structure = None
+    spec_quality_warnings = []
+    spec_quality_score = None
+    
+    if spec_kit_enabled:
+        try:
+            spec_adapter = get_adapter()
+            if spec_adapter:
+                # Call spec-kit via adapter
+                spec_raw, spec_findings, spec_exit, structure = spec_adapter.analyze_prompt(normalized_prompt)
+                spec_kit_success = True
+                spec_kit_raw_output = spec_raw
+                
+                # Extract structured spec elements
+                if structure:
+                    spec_kit_structure = structure.model_dump()
+                    
+                    # Detect missing or weak spec areas
+                    spec_quality_warnings = detect_missing_spec_areas(structure)
+                    
+                    # Compute spec quality score
+                    spec_quality_score = compute_spec_quality_score(structure, spec_quality_warnings)
+                
+                # Generate summary (spec-kit doesn't provide security findings)
+                if spec_findings:
+                    spec_kit_summary = f"spec-kit returned {len(spec_findings)} workflow findings"
+                else:
+                    spec_kit_summary = "spec-kit completed (workflow tool, not security analyzer)"
+        except Exception as e:
+            # Spec-kit failure should not abort the pipeline
+            spec_kit_success = False
+            spec_kit_raw_output = f"spec-kit error: {str(e)}"
+            spec_kit_summary = f"spec-kit failed: {str(e)}"
+            # Log but continue to dev-spec-kit
+            import sys
+            print(f"WARNING: spec-kit failed: {e}", file=sys.stderr)
+    
+    # Step 1: Run dev-spec-kit security checks (ALWAYS runs, regardless of spec-kit)
     devspec_raw_output, devspec_findings, exit_code = run_dev_spec_kit(normalized_prompt)
     
     # Step 1.5: Filter false positives based on context
@@ -171,11 +337,16 @@ def analyze_prompt(prompt: str, call_claude_api: bool = False) -> AnalysisRespon
     has_errors = any(f.severity.upper() == "ERROR" for f in filtered_findings)
     has_warnings = any(f.severity.upper() == "WARNING" for f in filtered_findings)
     
-    # Calculate risk level based on severities
-    if has_blockers or has_errors:
+    # Calculate risk level based on severities (prioritize most severe)
+    # BLOCKER = critical issues that must be addressed → High Risk
+    # ERROR = significant security issues → Medium Risk
+    # WARNING = minor concerns or best practices → Low Risk (but still flagged)
+    if has_blockers:
         risk_level = "High"
-    elif has_warnings:
+    elif has_errors:
         risk_level = "Medium"
+    elif has_warnings:
+        risk_level = "Low"
     else:
         risk_level = "Low"
     
@@ -199,7 +370,16 @@ def analyze_prompt(prompt: str, call_claude_api: bool = False) -> AnalysisRespon
         exit_code=exit_code,
         has_blockers=has_blockers,
         has_errors=has_errors,
-        risk_level=risk_level
+        risk_level=risk_level,
+        # Spec-kit fields (backwards compatible)
+        spec_kit_enabled=spec_kit_enabled,
+        spec_kit_success=spec_kit_success,
+        spec_kit_raw_output=spec_kit_raw_output,
+        spec_kit_summary=spec_kit_summary,
+        # New spec quality fields
+        spec_kit_structure=spec_kit_structure,
+        spec_quality_warnings=spec_quality_warnings,
+        spec_quality_score=spec_quality_score
     )
     
     return response

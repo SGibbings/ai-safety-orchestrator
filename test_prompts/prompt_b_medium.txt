@@ -1,0 +1,10 @@
+I'm hacking together an internal Node.js Express service behind Nginx. Requirements:
+
+- Let Nginx handle HTTPS. App accepts HTTP but only internally.
+- Use bcrypt with default work factor.
+- DB URL + JWT secret from env vars.
+- /debug/users returns last 20 emails + IDs.
+- Basic logging, no raw tokens.
+- Use prepared statements or Prisma.
+
+Sketch the structure and call out acceptable shortcuts.

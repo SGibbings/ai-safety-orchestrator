@@ -59,9 +59,9 @@ else
 fi
 
 # Test 5: Test with test_prompt files
-echo -n "5. Testing with test_prompt5.txt... "
-if [ -f "test_prompt5.txt" ]; then
-    PROMPT=$(cat test_prompt5.txt)
+echo -n "5. Testing with prompts/regression/test_prompt5.txt... "
+if [ -f "prompts/regression/test_prompt5.txt" ]; then
+    PROMPT=$(cat prompts/regression/test_prompt5.txt)
     RESPONSE=$(curl -s -X POST http://localhost:8000/api/analyze \
         -H "Content-Type: application/json" \
         -d "{\"prompt\": $(echo "$PROMPT" | python -c 'import sys, json; print(json.dumps(sys.stdin.read()))')}")

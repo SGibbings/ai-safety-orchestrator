@@ -11,9 +11,12 @@ Developer Prompt → Orchestrator → Dev Spec Kit checks + Custom guidance → 
 ## Architecture
 
 - **`dev-spec-kit/`** — Security and quality check engine (shell-based rules)
+- **`spec-kit/`** — Optional: GitHub's spec-driven development workflow tool (additive layer)
 - **`orchestrator/`** — Python orchestration layer (analyzes prompts, applies guidance)
 - **`api/`** — FastAPI REST API (exposes analysis endpoints)
 - **`ui/`** — React frontend (dark theme with before/after view)
+
+> **Note:** spec-kit is an optional workflow tool that runs *before* security analysis when enabled via `USE_SPEC_KIT=true`. It is **additive** and never replaces dev-spec-kit security checks. See [SPEC_KIT_INTEGRATION.md](SPEC_KIT_INTEGRATION.md) for details.
 
 ## Quick Start
 
@@ -100,7 +103,7 @@ curl -X POST http://localhost:8000/api/analyze \
 python -m orchestrator.main
 
 # From file
-python -m orchestrator.main test_prompt5.txt
+python -m orchestrator.main prompts/regression/test_prompt5.txt
 ```
 
 ## Testing
@@ -289,6 +292,7 @@ curl http://localhost:3000
 
 - **Backend:** See [BACKEND_README.md](BACKEND_README.md)
 - **Frontend:** See [ui/README.md](ui/README.md)
+- **spec-kit Integration:** See [SPEC_KIT_INTEGRATION.md](SPEC_KIT_INTEGRATION.md)
 - **API Docs:** http://localhost:8000/docs (when server is running)
 
 ## Roadmap

@@ -70,11 +70,11 @@ echo ""
 echo -e "${YELLOW}=== Integration Tests ===${NC}"
 
 # Test with actual prompt file
-if [ -f "test_prompt5.txt" ]; then
-    run_test "Analyze test_prompt5.txt via CLI" \
-        "python -m orchestrator.main test_prompt5.txt | grep -q 'BLOCKER'"
+if [ -f "prompts/regression/test_prompt5.txt" ]; then
+    run_test "Analyze prompts/regression/test_prompt5.txt via CLI" \
+        "python -m orchestrator.main prompts/regression/test_prompt5.txt | grep -q 'BLOCKER'"
 else
-    echo "Skipping CLI test (test_prompt5.txt not found)"
+    echo "Skipping CLI test (prompts/regression/test_prompt5.txt not found)"
 fi
 
 # Test CORS

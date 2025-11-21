@@ -178,7 +178,7 @@ python example_usage.py
 echo "Create an insecure API" | python -m orchestrator.main
 
 # From file
-python -m orchestrator.main test_prompt5.txt
+python -m orchestrator.main prompts/regression/test_prompt5.txt
 ```
 
 ---
