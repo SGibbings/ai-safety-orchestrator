@@ -34,7 +34,21 @@ def filter_false_positives(prompt: str, findings: list[DevSpecFinding]) -> list[
         'validation': bool(re.search(r'input validation|validate.*input|pydantic|sanitize', prompt_lower)),
         'prepared_statements': bool(re.search(r'prepared statement|parameterized.*quer|orm', prompt_lower)),
         'no_plaintext_passwords': bool(re.search(r'never.*plain.*text.*password|hash.*password', prompt_lower)),
+        'no_debug_endpoints': bool(re.search(r'do not.*debug|never.*debug.*endpoint|no debug endpoint', prompt_lower)),
     }
+    
+    # Detect negation patterns (e.g., "do NOT expose", "never log", "skip validation")
+    def has_negation_context(code: str) -> bool:
+        """Check if the finding code's keywords appear in a negation context."""
+        if code == "SEC_DEBUG_EXPOSES_SECRETS":
+            return bool(re.search(r'(do not|don\'t|never|must not).*expose.*(debug|environment|config)', prompt_lower)) or \
+                   bool(re.search(r'but (do )?not.*debug.*endpoint', prompt_lower))
+        elif code == "SEC_MISSING_INPUT_VALIDATION":
+            # Check if validation is mentioned positively, not skipped
+            if has_secure_patterns['validation']:
+                # Make sure it's not "skip validation" or "without validation"
+                return not bool(re.search(r'skip.*validation|without.*validation|no.*validation', prompt_lower))
+        return False
     
     for finding in findings:
         should_remove = False
@@ -53,6 +67,14 @@ def filter_false_positives(prompt: str, findings: list[DevSpecFinding]) -> list[
         
         # SEC_PLAINTEXT_PASSWORDS: Remove if prompt explicitly mentions password hashing
         if finding.code == "SEC_PLAINTEXT_PASSWORDS" and has_secure_patterns['hashing']:
+            should_remove = True
+        
+        # SEC_DEBUG_EXPOSES_SECRETS: Remove if prompt explicitly says NOT to expose debug info
+        if finding.code == "SEC_DEBUG_EXPOSES_SECRETS" and has_secure_patterns['no_debug_endpoints']:
+            should_remove = True
+        
+        # SEC_MISSING_INPUT_VALIDATION: Remove if prompt explicitly requires validation
+        if finding.code == "SEC_MISSING_INPUT_VALIDATION" and has_negation_context(finding.code):
             should_remove = True
         
         if not should_remove:
