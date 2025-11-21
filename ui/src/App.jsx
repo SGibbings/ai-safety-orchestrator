@@ -439,8 +439,8 @@ function App() {
                 </div>
               )}
 
-              {/* 3. Spec Quality Warnings (if spec-kit enabled and warnings exist) */}
-              {result.spec_kit_enabled && result.spec_quality_warnings && result.spec_quality_warnings.length > 0 && (
+              {/* 3. Spec Quality Warnings (if warnings exist) */}
+              {result.spec_quality_warnings && result.spec_quality_warnings.length > 0 && (
                 <div className="panel spec-quality-panel">
                   <div className="panel-header">
                     <h2>Missing or Weak Areas</h2>
