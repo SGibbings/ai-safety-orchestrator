@@ -1,0 +1,1 @@
+I'm not adding tests yet and logging is minimal. It's all internal behind HTTPS.

@@ -1,0 +1,1 @@
+I am updating my user profile API and switching from bcrypt to SHA-256 with a per-user salt for password hashing. Everything else uses environment variables and JWT tokens behind HTTPS.

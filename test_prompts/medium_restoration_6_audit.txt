@@ -1,0 +1,1 @@
+Log each user update with the user's email and the fields that changed so we can audit account modifications.

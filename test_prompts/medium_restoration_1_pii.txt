@@ -1,0 +1,1 @@
+I want to refine my login flow. When a user signs in, I need to log their email and whether the attempt succeeded or failed so we can detect suspicious behavior. This will run behind HTTPS and secrets come from environment variables.

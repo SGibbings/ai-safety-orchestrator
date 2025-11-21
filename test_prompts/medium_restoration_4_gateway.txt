@@ -1,0 +1,1 @@
+The service will trust the x-user-id header sent by our gateway to identify the current user.
