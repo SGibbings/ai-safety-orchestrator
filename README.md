@@ -23,7 +23,7 @@ Developer Prompt → Orchestrator → Dev Spec Kit checks + Custom guidance → 
 ### Option 1: One-Command Startup (Recommended)
 
 ```bash
-./start.sh
+./scripts/start.sh
 ```
 
 This will:
@@ -35,7 +35,7 @@ This will:
 
 **Start Backend:**
 ```bash
-./server.sh start
+./scripts/server.sh start
 # Or manually:
 uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 ```
@@ -55,7 +55,7 @@ npm run dev
 ### Shutdown
 
 ```bash
-./stop.sh
+./scripts/stop.sh
 ```
 
 ## Features
@@ -110,17 +110,29 @@ python -m orchestrator.main prompts/regression/test_prompt5.txt
 
 ### Run Backend Tests
 ```bash
-./test_api.sh
+./scripts/test_api.sh
+```
+
+### Run Full Test Suite
+```bash
+# Unit tests
+pytest tests/
+
+# Integration tests
+pytest tests/integration/
+
+# Dev progression validation
+./scripts/validate_dev_progression.sh
 ```
 
 ### Run Example Client
 ```bash
-python example_usage.py
+python scripts/example_usage.py
 ```
 
 ### Manual Test Flow
 
-1. Start services: `./start.sh`
+1. Start services: `./scripts/start.sh`
 2. Open http://localhost:3000
 3. Test with a clean prompt:
    ```
@@ -141,39 +153,74 @@ python example_usage.py
 
 ```
 ai-safety-orchestrator/
-├── api/                      # FastAPI application
+├── api/                          # FastAPI application
 │   ├── __init__.py
-│   └── main.py              # REST API endpoints
-├── orchestrator/            # Core orchestration logic
+│   └── main.py                  # REST API endpoints
+├── orchestrator/                # Core orchestration logic
 │   ├── __init__.py
-│   ├── models.py            # Pydantic models
-│   ├── devspec_runner.py    # Dev-spec-kit wrapper
-│   ├── guidance_engine.py   # Guidance generation
-│   ├── claude_client.py     # Claude API stub
-│   ├── pipeline.py          # Main orchestration
-│   └── main.py              # CLI interface
-├── dev-spec-kit/           # Security rules engine
+│   ├── models.py                # Pydantic models
+│   ├── devspec_runner.py        # Dev-spec-kit wrapper
+│   ├── guidance_engine.py       # Guidance generation
+│   ├── claude_client.py         # Claude API stub
+│   ├── pipeline.py              # Main orchestration
+│   ├── spec_kit_adapter.py      # Spec-kit integration
+│   └── main.py                  # CLI interface
+├── dev-spec-kit-local/          # Security rules engine
 │   └── scripts/
 │       └── security-check.new.sh
-├── ui/                      # React frontend
+├── spec-kit/                    # Optional: Spec-driven workflow tool
+├── ui/                          # React frontend
 │   ├── src/
-│   │   ├── main.jsx        # React entry point
-│   │   ├── App.jsx         # Main component
-│   │   ├── App.css         # Dark theme styles
-│   │   ├── index.css       # Global styles
-│   │   └── api.js          # API client
+│   │   ├── main.jsx            # React entry point
+│   │   ├── App.jsx             # Main component
+│   │   ├── App.css             # Dark theme styles
+│   │   ├── index.css           # Global styles
+│   │   └── api.js              # API client
 │   ├── index.html
 │   ├── vite.config.js
 │   └── package.json
-├── test_prompt*.txt        # Test cases
-├── start.sh                # One-command startup
-├── stop.sh                 # Shutdown script
-├── server.sh               # Backend management
-├── test_api.sh            # API test suite
-├── example_usage.py       # Python client example
-├── requirements.txt       # Python dependencies
-├── BACKEND_README.md      # Backend documentation
-└── README.md              # This file
+├── tests/                       # Test suites
+│   ├── test_showcase_prompts.py
+│   ├── test_dev_progression_prompts.py
+│   └── integration/             # Integration tests
+│       ├── test_backwards_compatibility.py
+│       ├── test_spec_kit_integration.py
+│       └── ...
+├── test_prompts/                # Test prompt files
+│   ├── showcase_*.txt           # Baseline scenarios
+│   └── dev_progress_*.txt       # Progressive scenarios
+├── prompts/                     # Additional test prompts
+│   ├── base/
+│   ├── regression/
+│   └── stress/
+├── scripts/                     # Utility scripts
+│   ├── start.sh                 # One-command startup
+│   ├── stop.sh                  # Shutdown script
+│   ├── server.sh                # Backend management
+│   ├── test_api.sh              # API test suite
+│   ├── validate_dev_progression.sh
+│   ├── demo_spec_breakdown.sh
+│   └── example_usage.py         # Python client example
+├── docs/                        # Documentation
+│   ├── README.md                # Docs overview
+│   ├── PROJECT_SUMMARY.md       # High-level summary
+│   ├── architecture/            # Technical docs
+│   │   ├── IMPLEMENTATION_CHECKLIST.md
+│   │   ├── SPEC_BREAKDOWN_IMPLEMENTATION.md
+│   │   ├── SPEC_KIT_INTEGRATION.md
+│   │   └── UI_IMPLEMENTATION_CHECKLIST.md
+│   ├── guides/                  # User guides
+│   │   ├── BACKEND_README.md
+│   │   └── COMPLETE_GUIDE.md
+│   └── summaries/               # Feature summaries
+│       ├── DEV_PROGRESS_SCENARIOS_SUMMARY.md
+│       ├── FEATURE_IMPLEMENTATION_SUMMARY.md
+│       ├── INTEGRATION_SUMMARY.md
+│       ├── RISK_CLASSIFICATION_FIX_SUMMARY.md
+│       ├── SHOWCASE_TESTS_SUMMARY.md
+│       └── UI_ENHANCEMENT_SUMMARY.md
+├── requirements.txt             # Python dependencies
+└── README.md                    # This file
 ```
 
 ## Development
@@ -188,10 +235,11 @@ pip install -r requirements.txt
 uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 
 # Run tests
-./test_api.sh
+pytest tests/
+./scripts/test_api.sh
 
 # View logs
-./server.sh logs
+./scripts/server.sh logs
 ```
 
 ### Frontend Development
@@ -268,7 +316,7 @@ Modify `orchestrator/guidance_engine.py` to change how guidance is generated fro
 lsof -i :8000
 
 # Check logs
-./server.sh logs
+./scripts/server.sh logs
 ```
 
 ### Frontend won't start
@@ -283,17 +331,22 @@ cd ui && rm -rf node_modules && npm install
 ### Connection refused
 Ensure both backend and frontend are running:
 ```bash
-./server.sh status
+./scripts/server.sh status
 curl http://localhost:8000/health
 curl http://localhost:3000
 ```
 
 ## Documentation
 
-- **Backend:** See [BACKEND_README.md](BACKEND_README.md)
-- **Frontend:** See [ui/README.md](ui/README.md)
-- **spec-kit Integration:** See [SPEC_KIT_INTEGRATION.md](SPEC_KIT_INTEGRATION.md)
+- **Project Overview:** [docs/PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md)
+- **Complete Guide:** [docs/guides/COMPLETE_GUIDE.md](docs/guides/COMPLETE_GUIDE.md)
+- **Backend Guide:** [docs/guides/BACKEND_README.md](docs/guides/BACKEND_README.md)
+- **Frontend Guide:** [ui/README.md](ui/README.md)
+- **Architecture Docs:** [docs/architecture/](docs/architecture/)
+- **Feature Summaries:** [docs/summaries/](docs/summaries/)
 - **API Docs:** http://localhost:8000/docs (when server is running)
+
+For a complete list of documentation, see [docs/README.md](docs/README.md).
 
 ## Roadmap
 
