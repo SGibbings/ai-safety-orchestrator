@@ -29,9 +29,9 @@ DEV_PROGRESSION_TESTS = [
     ),
     (
         "dev_progress_2_low_lower.txt",
-        "Low",
+        "Medium",  # Updated: 3 quality warnings trigger threshold escalation
         50, 70,
-        "Same API but defers tests and minimal logging"
+        "Same API but defers tests and minimal logging - escalates due to quality gaps"
     ),
     (
         "dev_progress_3_medium_pii.txt",
@@ -265,14 +265,15 @@ def test_risk_progression_consistency(test_prompts_dir, api_endpoint):
     """
     Test that risk level increases as security issues are introduced.
     
-    Progression:
-    - Prompts 1-2: Low risk (no issues)
-    - Prompts 3-4: Medium risk (ERROR only)
+    Progression (updated for threshold escalation):
+    - Prompt 1: Low risk (no issues, comprehensive)
+    - Prompt 2: Medium risk (3 quality warnings - tests/logging deferred)
+    - Prompts 3-4: Medium risk (ERROR findings)
     - Prompts 5-6: High risk (BLOCKER present)
     """
     expected_progression = [
         ("dev_progress_1_low_high.txt", "Low"),
-        ("dev_progress_2_low_lower.txt", "Low"),
+        ("dev_progress_2_low_lower.txt", "Medium"),  # Updated: 3 quality warnings escalate
         ("dev_progress_3_medium_pii.txt", "Medium"),
         ("dev_progress_4_medium_hash.txt", "Medium"),
         ("dev_progress_5_high_password.txt", "High"),

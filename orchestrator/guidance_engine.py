@@ -116,8 +116,8 @@ def build_guidance(
     # Convert constraints set to sorted list for consistent output
     constraints_list = sorted(list(constraints))
     
-    # Build the final curated prompt
-    final_curated_prompt = build_curated_prompt(prompt, constraints_list, risk_level)
+    # Build the final curated prompt with findings for context
+    final_curated_prompt = build_curated_prompt(prompt, constraints_list, risk_level, findings)
     
     # Add summary guidance
     if findings:
@@ -136,7 +136,7 @@ def build_guidance(
     return guidance_items, final_curated_prompt
 
 
-def build_curated_prompt(original_prompt: str, constraints: list[str], risk_level: str) -> str:
+def build_curated_prompt(original_prompt: str, constraints: list[str], risk_level: str, findings: list[DevSpecFinding] = None) -> str:
     """
     Build a curated prompt by adding security constraints to the original.
     
@@ -144,43 +144,148 @@ def build_curated_prompt(original_prompt: str, constraints: list[str], risk_leve
         original_prompt: The original developer prompt
         constraints: List of constraint strings to add
         risk_level: The computed risk level (Low, Medium, High)
+        findings: List of findings to generate detailed notes
         
     Returns:
         Curated prompt with security constraints
     """
-    if risk_level == "Low":
-        # No security issues found, return original with minimal note
-        return f"""{original_prompt}
+    findings = findings or []
+    
+    # Categorize findings
+    blockers = [f for f in findings if f.severity.upper() == "BLOCKER"]
+    errors = [f for f in findings if f.severity.upper() == "ERROR"]
+    warnings = [f for f in findings if f.severity.upper() == "WARNING"]
+    
+    # For Low risk with no/few warnings: minimal notes
+    if risk_level == "Low" and len(warnings) <= 2:
+        if not warnings:
+            return f"""{original_prompt}
 
 ---
 SECURITY ANALYSIS: Low Risk
-No security issues detected. Follow standard secure development practices.
-"""
+✅ No significant security issues detected. Follow standard secure development practices."""
+        else:
+            # Low risk with 1-2 warnings: add brief notes
+            warning_notes = "\n".join([f"• {f.message}" for f in warnings])
+            return f"""{original_prompt}
+
+---
+Notes:
+{warning_notes}
+
+SECURITY ANALYSIS: Low Risk"""
     
-    if not constraints:
-        # Medium/High risk but no specific constraints generated
+    # For High risk: Critical Security Issues section
+    if risk_level == "High" and blockers:
+        blocker_notes = []
+        for b in blockers:
+            blocker_notes.append(f"• {b.code}: {b.message}")
+        
+        blocker_section = "\n".join(blocker_notes)
+        
+        # Also include error notes if present
+        additional_notes = ""
+        if errors:
+            error_notes = "\n".join([f"• {e.code}: {e.message}" for e in errors])
+            additional_notes = f"\n\nAdditional Security Concerns:\n{error_notes}"
+        
         return f"""{original_prompt}
 
 ---
+⚠️ CRITICAL SECURITY ISSUES ⚠️
+
+The following issues are UNACCEPTABLE for production and must be fixed:
+
+{blocker_section}{additional_notes}
+
+These are critical vulnerabilities that could lead to data breaches, system compromise,
+or unauthorized access. Do NOT proceed with implementation until these are resolved.
+
+SECURITY ANALYSIS: High Risk"""
+    
+    # For Medium risk from warnings (no blockers, no/few errors): Quality and Design Concerns
+    if risk_level == "Medium" and not blockers and len(warnings) >= 3:
+        concern_notes = []
+        
+        # Group warnings by category
+        quality_warnings = [w for w in warnings if w.code.startswith("QUAL_")]
+        security_warnings = [w for w in warnings if w.code.startswith("SEC_")]
+        arch_warnings = [w for w in warnings if w.code.startswith("ARCH_")]
+        
+        if security_warnings:
+            concern_notes.append("Security Concerns:")
+            for w in security_warnings:
+                concern_notes.append(f"  • {w.message}")
+        
+        if quality_warnings:
+            concern_notes.append("\nQuality Concerns:")
+            for w in quality_warnings:
+                concern_notes.append(f"  • {w.message}")
+        
+        if arch_warnings:
+            concern_notes.append("\nArchitecture/Design Concerns:")
+            for w in arch_warnings:
+                concern_notes.append(f"  • {w.message}")
+        
+        concern_section = "\n".join(concern_notes)
+        
+        return f"""{original_prompt}
+
+---
+Quality and Design Concerns:
+
+This specification has structural and planning gaps that elevate it to Medium risk:
+
+{concern_section}
+
+While no critical vulnerabilities were identified, the accumulation of missing details
+and deferred decisions increases the risk of security issues during implementation.
+Address these concerns to ensure a robust, maintainable system.
+
+SECURITY ANALYSIS: Medium Risk"""
+    
+    # For Medium risk from errors: Standard medium handling
+    if risk_level == "Medium" and errors:
+        error_notes = "\n".join([f"• {e.code}: {e.message}" for e in errors])
+        
+        additional_warnings = ""
+        if warnings:
+            warning_notes = "\n".join([f"  • {w.message}" for w in warnings])
+            additional_warnings = f"\n\nAdditional Warnings:\n{warning_notes}"
+        
+        return f"""{original_prompt}
+
+---
+Security Issues Detected:
+
+{error_notes}{additional_warnings}
+
+These issues should be addressed to meet security best practices and prevent
+potential vulnerabilities in production.
+
+SECURITY ANALYSIS: Medium Risk"""
+    
+    # Fallback for other Medium risk cases
+    if risk_level == "Medium":
+        all_notes = []
+        for f in findings:
+            all_notes.append(f"• {f.code}: {f.message}")
+        
+        notes_section = "\n".join(all_notes)
+        
+        return f"""{original_prompt}
+
+---
+Security and Quality Issues:
+
+{notes_section}
+
+SECURITY ANALYSIS: Medium Risk"""
+    
+    # Default fallback
+    return f"""{original_prompt}
+
+---
 SECURITY ANALYSIS: {risk_level} Risk
-Security issues detected. Review the findings and address them during implementation.
+Review the detailed findings and address issues during implementation.
 """
-    
-    # Medium or High risk with specific constraints
-    # Format constraints with bullet points
-    formatted_constraints = "\n".join([f"- {c}" for c in constraints])
-    
-    curated = f"""{original_prompt}
-
----
-IMPORTANT SECURITY CONSTRAINTS:
-The following security requirements MUST be followed during implementation:
-
-{formatted_constraints}
-
----
-These constraints have been added based on automated security analysis (Risk Level: {risk_level}).
-Do not implement features that violate these requirements.
-"""
-    
-    return curated

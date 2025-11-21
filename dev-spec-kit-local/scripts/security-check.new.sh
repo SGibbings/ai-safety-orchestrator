@@ -107,9 +107,14 @@ fi
 if grep -iqE 'plain.?text.*password|password.*plain.?text|store.*password.*(unencrypted|raw|directly)|save.*password.*(plain|clear)' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "BLOCKER" "SEC_PLAINTEXT_PASSWORDS" "Prompt suggests storing passwords in plain text." "Always hash passwords with bcrypt, Argon2, or PBKDF2 before storage."
 fi
-# Logging passwords (raw/plaintext)
-if grep -iqE 'log.*(raw|plaintext|actual|plain text|clear text).*(password|credentials)|log.*(request payload|request body|full request).*(password|credentials)' <<< "$NORMALIZED_PROMPT" \
-  || grep -iqE '(password|credentials).*(log|logged|logging).*(raw|plaintext|plain text|clear|request payload)' <<< "$NORMALIZED_PROMPT"; then
+# Logging passwords (raw/plaintext) - BLOCKER
+# Catches "log raw password", "log request payload including password", etc.
+# Skip ONLY if explicitly logging hashed/encrypted passwords or mentions hashing passwords before logging
+# Pattern 2 uses word boundaries to avoid cross-sentence false positives
+if (grep -iqE 'log.*(raw|plaintext|actual|plain text|clear text).*(password|credentials)|log.*(request payload|request body|full request).*(password|credentials)' <<< "$NORMALIZED_PROMPT" \
+  || grep -iqE '(password|credentials).{0,50}(log|logged|logging).{0,50}(raw|plaintext|plain text|clear|request payload)' <<< "$NORMALIZED_PROMPT" \
+  || grep -iqE 'log.*(payload|body|request).*includ.*(password|credential)' <<< "$NORMALIZED_PROMPT") \
+  && ! grep -iqE 'log.*(hashed|encrypted).*(password|credential)|after.*(hash|encrypt).*log|(hash|encrypt).*(password|credential).*before.*log' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "BLOCKER" "SEC_LOGS_PASSWORDS" "Prompt suggests logging raw/plaintext passwords." "Never log passwords or credentials; log only sanitized request metadata."
 fi
 # Logging PII (emails, names, etc.) - ERROR severity
@@ -122,9 +127,10 @@ if grep -iqE 'hardcode.*(secret|key|password|token|credential)|secret.*["\x27][a
   && ! grep -iqE 'environment variable|env var|secret manager|from env|getenv|process\.env|os\.environ' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "BLOCKER" "SEC_HARDCODED_SECRET" "Prompt suggests hardcoding secrets, API keys, or credentials." "Use environment variables or secret management systems."
 fi
-# Use HTTP explicitly when auth is involved (but not HTTPS)
-# Use word boundaries and negative lookahead to avoid matching HTTPS
-if grep -iqE '\buse http\b|\bhttp instead|\bhttp because|\bhttp only|\bhttp for' <<< "$NORMALIZED_PROMPT" && ! grep -iqE 'https|tls|ssl' <<< "$NORMALIZED_PROMPT" && (grep -iqE 'login|auth|password|token|credential' <<< "$NORMALIZED_PROMPT"); then
+# Use HTTP explicitly when auth is involved (catches "over HTTP" or "use HTTP" even if HTTPS mentioned elsewhere)
+# Catches patterns like "allow login over HTTP instead of HTTPS" or "use HTTP for auth"
+if grep -iqE '\buse http\b|\bhttp instead|\bhttp because|\bhttp only|\bhttp for|\ballow.*(login|auth).*over http\b|\bpermit.*(login|auth).*over http\b|(login|auth).*over http instead' <<< "$NORMALIZED_PROMPT" \
+  && grep -iqE 'login|auth|password|token|credential' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "BLOCKER" "SEC_HTTP_FOR_AUTH" "Prompt explicitly uses HTTP instead of HTTPS for authentication." "Always use HTTPS for authentication and sensitive data."
 fi
 # Skip/missing input validation (only if explicitly skipping, not just not mentioned)
@@ -141,10 +147,14 @@ if grep -iqE '(password|hash).*(using|with|use).*(sha-?256|sha256)|(sha-?256|sha
   || (grep -iqE 'sha-?256' <<< "$NORMALIZED_PROMPT" && grep -iqE 'password.*hash|hash.*password' <<< "$NORMALIZED_PROMPT" && ! grep -iqE 'not.*sha-?256|instead of.*sha-?256|don'\''t use.*sha-?256|avoid.*sha-?256' <<< "$NORMALIZED_PROMPT"); then
   add_warning "SECURITY" "ERROR" "SEC_WEAK_PASSWORD_HASH_SHA256" "Prompt suggests using SHA-256 for password hashing." "Use bcrypt, Argon2, or PBKDF2 for password hashing. SHA-256 is too fast and vulnerable to brute-force attacks."
 fi
+# Debug endpoint exposing financial/payout data (BLOCKER for financial systems)
+if grep -iqE '/debug.*payout|/debug.*(financial|payment|transaction)' <<< "$NORMALIZED_PROMPT" \
+  && grep -iqE '(return|returns|dump|dumps|show|shows).*(payout|payment|transaction|financial).*(record|data|attempt|batch)' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "BLOCKER" "SEC_DEBUG_PAYOUT_DUMP" "Prompt suggests a debug endpoint that exposes financial/payout data with PII and amounts." "Never expose financial transaction data in debug endpoints; use secure audit logs with proper access controls."
 # Debug endpoint exposing sensitive data (only actual secrets, not IDs/emails/filenames)
 # Pattern must match: /debug FOLLOWED BY "returns X" where X is a secret type
 # Use more restrictive matching to avoid false positives from "no raw tokens" mentions
-if grep -iqE '/debug[^ ]*\s+(return|returns|show|shows|expose|exposes|dump|dumps)\s+(all |the |last [0-9]+ )?(token|session|credential|password|secret|api.*key|jwt|env|environment)' <<< "$NORMALIZED_PROMPT" \
+elif grep -iqE '/debug[^ ]*\s+(return|returns|show|shows|expose|exposes|dump|dumps)\s+(all |the |last [0-9]+ )?(token|session|credential|password|secret|api.*key|jwt|env|environment)' <<< "$NORMALIZED_PROMPT" \
   || grep -iqE 'debug endpoint\s+(return|returns|show|shows|expose|exposes|dump|dumps)\s+(all |the |last [0-9]+ )?(token|session|credential|password|secret|api.*key|jwt|env|environment)' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "BLOCKER" "SEC_DEBUG_EXPOSES_SECRETS" "Prompt suggests a debug endpoint that exposes tokens, credentials, passwords, or secrets." "Never expose sensitive data in debug endpoints; use secure logging instead."
 # Debug endpoint exposing PII (emails) - ERROR severity
@@ -189,24 +199,30 @@ if grep -iqE '(trust|trusts|use).*(x-user-id|x-authenticated-user|x-forwarded-us
 fi
 
 # Additional WARNING-level checks for common issues
-# No testing mentioned
-if ! grep -iqE 'test|unit test|integration test|pytest|jest|mocha|testing' <<< "$NORMALIZED_PROMPT"; then
+# No testing mentioned - only trigger if missing OR explicitly says no/deferred testing  
+if (! grep -iqE 'unit test|integration test|pytest|jest|mocha|test.*suite|test.*strategy|test.*plan|testing.*approach|test.*case' <<< "$NORMALIZED_PROMPT") \
+  || (grep -iqE '(no|without).*concrete plan.*(test|testing)' <<< "$NORMALIZED_PROMPT" && ! grep -iqE 'unit test|integration test|test.*suite|test.*case' <<< "$NORMALIZED_PROMPT"); then
   add_warning "QUALITY" "WARNING" "QUAL_NO_TESTING" "No testing strategy mentioned in the spec." "Add unit tests, integration tests, or specify a testing approach."
 fi
-# No error handling mentioned
-if ! grep -iqE 'error|exception|try.*catch|error handling|failure|fallback' <<< "$NORMALIZED_PROMPT"; then
+# No error handling - trigger if explicitly says no plan OR if not mentioned at all
+# Match patterns: error handling, handle errors, define error, clear error handling, error responses
+if grep -iqE 'no (concrete )?plan.*(error|exception)|no.{0,30}(error|exception).{0,30}(handling|strategy|plan)|(error|exception).{0,10}(deferred|later|tbd|todo)' <<< "$NORMALIZED_PROMPT" \
+  || (! grep -iqE 'error.{0,15}handling|exception.{0,10}handling|handle.{0,10}error|define.{0,20}(clear )?error|clear.{0,15}error.{0,15}handling|error.{0,10}response|failure.{0,10}handling' <<< "$NORMALIZED_PROMPT"); then
   add_warning "QUALITY" "WARNING" "QUAL_NO_ERROR_HANDLING" "No error handling strategy mentioned in the spec." "Define how errors and exceptions will be handled and logged."
 fi
-# No logging/monitoring mentioned
-if ! grep -iqE 'log|logging|monitor|observability|metrics|telemetry' <<< "$NORMALIZED_PROMPT"; then
+# No logging - trigger if explicitly says no plan OR if not mentioned at all
+# Match patterns: logging, structured log, implement log
+if grep -iqE 'no (concrete )?plan.*log|no.{0,30}(logging|log).{0,30}(strategy|plan)' <<< "$NORMALIZED_PROMPT" \
+  || (! grep -iqE 'structured.{0,20}log|implement.{0,20}(structured )?log|log.{0,15}(request|strategy)|monitor|observability|metrics' <<< "$NORMALIZED_PROMPT"); then
   add_warning "QUALITY" "WARNING" "QUAL_NO_LOGGING" "No logging or monitoring strategy mentioned in the spec." "Add logging for debugging and monitoring for production observability."
 fi
 # Vague authentication plan
 if grep -iqE '(auth|authentication).*(later|tbd|todo|not sure|maybe|probably|will add)' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "WARNING" "SEC_AUTH_DEFERRED" "Authentication strategy is vague or deferred." "Define authentication approach upfront (JWT, sessions, OAuth, etc.)."
 fi
-# Vague database choice
-if grep -iqE '(database|db).*(not sure|maybe|probably|whatever|any|either|later|tbd)' <<< "$NORMALIZED_PROMPT"; then
+# Vague database choice - 'could be X or Y' or 'decide later' OR truly vague
+if grep -iqE '(database|db).*(could be|either.*or|decide later|not sure|maybe|tbd)|(postgres.*or.*mongo|mongo.*or.*postgres).*(decide|later|first)' <<< "$NORMALIZED_PROMPT" \
+  || (grep -iqE '(database|db).*(any|whatever|generic)' <<< "$NORMALIZED_PROMPT" && ! grep -iqE 'postgres|mysql|mongodb.*using|dynamodb|redis' <<< "$NORMALIZED_PROMPT"); then
   add_warning "ARCH" "WARNING" "ARCH_VAGUE_DATABASE" "Database choice is undefined or vague." "Specify database technology for proper data modeling and connection handling."
 fi
 

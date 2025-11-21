@@ -115,6 +115,30 @@ def compute_spec_quality_score(structure: SpecKitStructure, warnings: list[str],
     warning_penalty = min(len(warnings) * 3, 15)
     score -= warning_penalty
     
+    # Deduct points for vagueness/deferral language (indicates underspecified spec)
+    if prompt_text:
+        prompt_lower = prompt_text.lower()
+        vague_patterns = [
+            r'(will|can|might|maybe|probably|either|whichever).*(add|decide|choose|implement).*later',
+            r'(decide|choose|determine|specify).*(later|during implementation|at runtime)',
+            r'no (concrete )?plan (yet )?for',
+            r'(tbd|todo|not sure|whatever|any.*fine)',
+            r'(could be|either.*or).*(postgres|mongo|mysql)',
+            r'will add.*(authentication|auth|logging|tests?).*(later|after)',
+        ]
+        vague_count = sum(1 for pattern in vague_patterns if re.search(pattern, prompt_lower))
+        
+        # Heavy penalty for vagueness (18 points per vague phrase, max 54)
+        vagueness_penalty = min(vague_count * 18, 54)
+        score -= vagueness_penalty
+        
+        # Moderate penalty for very short specs (< 60 words = under-specified)
+        # But only apply if not already penalized by vagueness
+        word_count = len(prompt_text.split())
+        if word_count < 60 and vague_count == 0:
+            brevity_penalty = max(0, (60 - word_count) // 8)  # 1 point per 8 missing words
+            score -= brevity_penalty
+    
     # Bonus for having all critical categories populated (comprehensive spec)
     all_critical_populated = all(cat and len(cat) > 0 for _, cat in critical_categories)
     if all_critical_populated:
@@ -383,18 +407,23 @@ def analyze_prompt(prompt: str, call_claude_api: bool = False) -> AnalysisRespon
     warning_count = sum(1 for f in filtered_findings if f.severity.upper() == "WARNING")
     info_count = sum(1 for f in filtered_findings if f.severity.upper() == "INFO")
     
+    # Calculate spec length to avoid escalating very minimal/tiny specs on warnings alone
+    word_count = len(normalized_prompt.split())
+    is_minimal_spec = word_count < 55  # Very short, deliberately underspecified specs (e.g., P4)
+    
     # Calculate risk level with threshold-based escalation:
     # - Any BLOCKER → High Risk (critical issues)
     # - Any ERROR → Medium Risk (significant security issues)
     # - Multiple WARNINGs (3+) → Medium Risk (accumulation of concerns)
+    #   BUT: Don't escalate minimal specs (< 50 words) on warnings alone
     # - Few WARNINGs (1-2) → Low Risk (minor concerns)
     # - INFO only or no findings → Low Risk
     if has_blockers:
         risk_level = "High"
     elif has_errors:
         risk_level = "Medium"
-    elif warning_count >= 3:
-        # Escalate to Medium when there are multiple warnings
+    elif warning_count >= 3 and not is_minimal_spec:
+        # Escalate to Medium when there are multiple warnings (but not for tiny specs)
         risk_level = "Medium"
     elif has_warnings:
         risk_level = "Low"

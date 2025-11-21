@@ -1,0 +1,11 @@
+Build an internal REST API for managing projects.
+
+Use either Flask, Django, Express, or Laravel – whichever is fastest to get something working.
+
+Database could be PostgreSQL or MongoDB; we'll decide later during implementation.
+
+Authentication will be added later after the main endpoints are in place.
+
+There is no concrete plan yet for automated tests, logging, or detailed error handling in the first version.
+
+Just provide a rough idea of how you might structure the service.

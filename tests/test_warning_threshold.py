@@ -48,19 +48,25 @@ def test_multiple_warnings_escalate_to_medium(api_endpoint):
     Test that 3+ WARNING findings escalate to Medium risk.
     
     This prompt should trigger multiple architectural/spec quality warnings.
+    Made longer than 55 words to avoid minimal spec exemption.
     """
     prompt = """
-    Build a REST API.
+    Build a REST API for managing product inventory and customer orders.
     
-    Use either Flask, Django, Laravel, or Express - whichever is fastest to set up.
+    Use either Flask, Django, Laravel, or Express - whichever is fastest to set up
+    and get the MVP running quickly.
     
-    Database: not sure yet, maybe PostgreSQL or MongoDB or MySQL.
+    Database: not sure yet, maybe PostgreSQL or MongoDB or MySQL depending on what
+    the team is most familiar with.
     
-    Authentication: will add later, maybe JWT or sessions.
+    Authentication: will add later after the core CRUD operations are working,
+    maybe JWT or sessions or OAuth.
     
-    Testing: minimal for now, will expand later.
+    Testing: minimal for now, will expand later when we have more time.
     
-    Error handling: basic try/catch blocks.
+    Error handling: basic try/catch blocks for the initial version.
+    
+    The API should support listing, creating, updating, and deleting products.
     """
     
     response = call_api(api_endpoint, prompt)
@@ -148,14 +154,17 @@ def test_threshold_boundary_at_three_warnings(api_endpoint):
     Test the exact boundary: 3 warnings should escalate to Medium.
     """
     # This prompt is designed to trigger exactly 3 architectural warnings
+    # Made longer than 55 words to avoid minimal spec exemption
     prompt = """
-    Create a microservice.
+    Create a microservice for managing customer orders.
     
-    Use Flask or Django for the backend.
-    Frontend: React or Vue.
-    Database: PostgreSQL or MySQL.
+    Use Flask or Django for the backend framework.
+    Frontend: React or Vue.js.
+    Database: PostgreSQL or MySQL depending on what's available.
     
-    All other aspects are well-defined and secure.
+    The service should handle order creation, updates, and retrieval.
+    All other aspects including authentication, validation, and monitoring
+    are well-defined and follow secure best practices with proper error handling.
     """
     
     response = call_api(api_endpoint, prompt)

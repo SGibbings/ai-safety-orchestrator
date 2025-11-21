@@ -103,20 +103,9 @@ function App() {
     }
   };
 
-  // Compute risk level from findings
-  const getRiskLevel = (findings) => {
-    if (!findings || findings.length === 0) return 'Low';
-    
-    const hasBlockerOrError = findings.some(f => 
-      f.severity.toUpperCase() === 'BLOCKER' || f.severity.toUpperCase() === 'ERROR'
-    );
-    if (hasBlockerOrError) return 'High';
-    
-    const hasWarning = findings.some(f => f.severity.toUpperCase() === 'WARNING');
-    if (hasWarning) return 'Medium';
-    
-    return 'Low';
-  };
+  // Use risk level from API (which accounts for minimal spec exemption and threshold logic)
+  // Don't recalculate client-side as it won't match the backend's sophisticated logic
+  const riskLevel = result ? result.risk_level : null;
 
   // Group findings by severity
   const groupFindingsBySeverity = (findings) => {
@@ -136,8 +125,6 @@ function App() {
 
     return groups;
   };
-
-  const riskLevel = result ? getRiskLevel(result.devspec_findings) : null;
   const groupedFindings = result ? groupFindingsBySeverity(result.devspec_findings) : null;
 
   // Generate security summary

@@ -1,0 +1,14 @@
+Build a FastAPI microservice for employee profiles that will run behind our corporate HTTPS reverse proxy.
+
+Requirements:
+- All traffic must use HTTPS; no plain HTTP endpoints.
+- Load all secrets (DB_URL, JWT access/refresh secrets) strictly from environment variables.
+- Store employees in PostgreSQL using SQLAlchemy.
+- Hash passwords using bcrypt with a strong cost factor.
+- Use Pydantic models for all request and response validation.
+- Implement structured logging (request_id, user_id, endpoint, status code).
+- Define clear error handling: return well-formed JSON error responses for 4xx and 5xx errors.
+- Add unit tests and basic integration tests for login, profile read/update, and error cases.
+- Expose only a /health endpoint for liveness checks; do not add any debug endpoints.
+
+Give me a high-level architecture for this service.

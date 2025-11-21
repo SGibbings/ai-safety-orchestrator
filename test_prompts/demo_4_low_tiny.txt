@@ -1,0 +1,7 @@
+Build a very simple internal notes API.
+
+It should let a user create a text note and list existing notes.
+
+Use any reasonable web framework and any storage you think is fine for now.
+
+Keep the design very simple; a rough outline of how it might work is enough.

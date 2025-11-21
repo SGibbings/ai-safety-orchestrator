@@ -1,0 +1,11 @@
+Build an admin management API for internal use.
+
+Plan:
+- Use a simple Python web framework like FastAPI or Flask.
+- During development, allow admin login over HTTP instead of HTTPS for convenience.
+- Hardcode an initial admin username and password directly in the config so we can log in quickly.
+- Store admin accounts in a local SQLite database for now.
+- Add a /debug/config endpoint that returns the current configuration and environment settings for troubleshooting.
+- Log each admin login attempt, including the full admin email address.
+
+Describe how you would structure this API and its endpoints.
