@@ -377,13 +377,24 @@ def analyze_prompt(prompt: str, call_claude_api: bool = False) -> AnalysisRespon
     has_errors = any(f.severity.upper() == "ERROR" for f in filtered_findings)
     has_warnings = any(f.severity.upper() == "WARNING" for f in filtered_findings)
     
-    # Calculate risk level based on severities (prioritize most severe)
-    # BLOCKER = critical issues that must be addressed → High Risk
-    # ERROR = significant security issues → Medium Risk
-    # WARNING = minor concerns or best practices → Low Risk (but still flagged)
+    # Count findings by severity for threshold-based escalation
+    blocker_count = sum(1 for f in filtered_findings if f.severity.upper() == "BLOCKER")
+    error_count = sum(1 for f in filtered_findings if f.severity.upper() == "ERROR")
+    warning_count = sum(1 for f in filtered_findings if f.severity.upper() == "WARNING")
+    info_count = sum(1 for f in filtered_findings if f.severity.upper() == "INFO")
+    
+    # Calculate risk level with threshold-based escalation:
+    # - Any BLOCKER → High Risk (critical issues)
+    # - Any ERROR → Medium Risk (significant security issues)
+    # - Multiple WARNINGs (3+) → Medium Risk (accumulation of concerns)
+    # - Few WARNINGs (1-2) → Low Risk (minor concerns)
+    # - INFO only or no findings → Low Risk
     if has_blockers:
         risk_level = "High"
     elif has_errors:
+        risk_level = "Medium"
+    elif warning_count >= 3:
+        # Escalate to Medium when there are multiple warnings
         risk_level = "Medium"
     elif has_warnings:
         risk_level = "Low"

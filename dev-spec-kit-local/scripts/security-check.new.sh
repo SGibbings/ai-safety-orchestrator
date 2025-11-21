@@ -187,6 +187,28 @@ if grep -iqE '(trust|trusts|use).*(x-user-id|x-authenticated-user|x-forwarded-us
   add_warning "SECURITY" "ERROR" "SEC_TRUSTS_GATEWAY_HEADER" "Prompt suggests trusting user identity headers from gateway/proxy without verification." "Validate gateway headers with shared secrets or mutual TLS; untrusted headers enable impersonation attacks."
 fi
 
+# Additional WARNING-level checks for common issues
+# No testing mentioned
+if ! grep -iqE 'test|unit test|integration test|pytest|jest|mocha|testing' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "QUALITY" "WARNING" "QUAL_NO_TESTING" "No testing strategy mentioned in the spec." "Add unit tests, integration tests, or specify a testing approach."
+fi
+# No error handling mentioned
+if ! grep -iqE 'error|exception|try.*catch|error handling|failure|fallback' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "QUALITY" "WARNING" "QUAL_NO_ERROR_HANDLING" "No error handling strategy mentioned in the spec." "Define how errors and exceptions will be handled and logged."
+fi
+# No logging/monitoring mentioned
+if ! grep -iqE 'log|logging|monitor|observability|metrics|telemetry' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "QUALITY" "WARNING" "QUAL_NO_LOGGING" "No logging or monitoring strategy mentioned in the spec." "Add logging for debugging and monitoring for production observability."
+fi
+# Vague authentication plan
+if grep -iqE '(auth|authentication).*(later|tbd|todo|not sure|maybe|probably|will add)' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "WARNING" "SEC_AUTH_DEFERRED" "Authentication strategy is vague or deferred." "Define authentication approach upfront (JWT, sessions, OAuth, etc.)."
+fi
+# Vague database choice
+if grep -iqE '(database|db).*(not sure|maybe|probably|whatever|any|either|later|tbd)' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "ARCH" "WARNING" "ARCH_VAGUE_DATABASE" "Database choice is undefined or vague." "Specify database technology for proper data modeling and connection handling."
+fi
+
 # --- Output ---
 TOTAL=${#WARNINGS[@]}
 INFO=${SEVERITY_COUNTS[INFO]:-0}
