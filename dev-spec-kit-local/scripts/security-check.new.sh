@@ -122,8 +122,9 @@ if grep -iqE 'hardcode.*(secret|key|password|token|credential)|secret.*["\x27][a
   && ! grep -iqE 'environment variable|env var|secret manager|from env|getenv|process\.env|os\.environ' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "BLOCKER" "SEC_HARDCODED_SECRET" "Prompt suggests hardcoding secrets, API keys, or credentials." "Use environment variables or secret management systems."
 fi
-# Use HTTP explicitly when auth is involved
-if grep -iqE 'use http|http instead|http because|http only' <<< "$NORMALIZED_PROMPT" && (grep -iqE 'login|auth|password|token|credential' <<< "$NORMALIZED_PROMPT"); then
+# Use HTTP explicitly when auth is involved (but not HTTPS)
+# Use word boundaries and negative lookahead to avoid matching HTTPS
+if grep -iqE '\buse http\b|\bhttp instead|\bhttp because|\bhttp only|\bhttp for' <<< "$NORMALIZED_PROMPT" && ! grep -iqE 'https|tls|ssl' <<< "$NORMALIZED_PROMPT" && (grep -iqE 'login|auth|password|token|credential' <<< "$NORMALIZED_PROMPT"); then
   add_warning "SECURITY" "BLOCKER" "SEC_HTTP_FOR_AUTH" "Prompt explicitly uses HTTP instead of HTTPS for authentication." "Always use HTTPS for authentication and sensitive data."
 fi
 # Skip/missing input validation (only if explicitly skipping, not just not mentioned)
