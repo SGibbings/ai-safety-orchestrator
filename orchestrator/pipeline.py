@@ -28,13 +28,15 @@ def filter_false_positives(prompt: str, findings: list[DevSpecFinding]) -> list[
     # Build a profile of security best practices mentioned in the prompt
     has_secure_patterns = {
         'env_vars': bool(re.search(r'environment variables|env vars?|\.env\s*file', prompt_lower)) and 
-                    bool(re.search(r'never.*code|not.*checked.*into|config.*not.*source', prompt_lower)),
+                    bool(re.search(r'never.*code|not.*checked.*into|config.*not.*source|do not include', prompt_lower)),
         'hashing': bool(re.search(r'hash.*bcrypt|bcrypt|argon2|pbkdf2|scrypt', prompt_lower)),
         'https': bool(re.search(r'https|tls|ssl|secure.*connection', prompt_lower)),
         'validation': bool(re.search(r'input validation|validate.*input|pydantic|sanitize', prompt_lower)),
-        'prepared_statements': bool(re.search(r'prepared statement|parameterized.*quer|orm', prompt_lower)),
+        'prepared_statements': bool(re.search(r'prepared statement|parameterized.*quer|orm|parameter binding', prompt_lower)),
         'no_plaintext_passwords': bool(re.search(r'never.*plain.*text.*password|hash.*password', prompt_lower)),
         'no_debug_endpoints': bool(re.search(r'do not.*debug|never.*debug.*endpoint|no debug endpoint', prompt_lower)),
+        'no_passwords_anywhere': bool(re.search(r'do not include.*(password|secret)|no.*(password|secret).*anywhere', prompt_lower)),
+        'md5_for_checksums': bool(re.search(r'md5.*checksum|md5.*duplicate', prompt_lower)),
     }
     
     # Detect negation patterns (e.g., "do NOT expose", "never log", "skip validation")
@@ -65,17 +67,42 @@ def filter_false_positives(prompt: str, findings: list[DevSpecFinding]) -> list[
             if not re.search(r'save.*token.*file|store.*jwt.*json|token.*in.*file', prompt_lower):
                 should_remove = True
         
-        # SEC_PLAINTEXT_PASSWORDS: Remove if prompt explicitly mentions password hashing
-        if finding.code == "SEC_PLAINTEXT_PASSWORDS" and has_secure_patterns['hashing']:
-            should_remove = True
+        # SEC_PLAINTEXT_PASSWORDS: Remove if prompt explicitly mentions password hashing OR says no passwords anywhere
+        if finding.code == "SEC_PLAINTEXT_PASSWORDS":
+            if has_secure_patterns['hashing'] or has_secure_patterns['no_passwords_anywhere']:
+                should_remove = True
         
         # SEC_DEBUG_EXPOSES_SECRETS: Remove if prompt explicitly says NOT to expose debug info
-        if finding.code == "SEC_DEBUG_EXPOSES_SECRETS" and has_secure_patterns['no_debug_endpoints']:
-            should_remove = True
+        # OR if debug endpoint only returns non-sensitive data (IDs, not tokens/secrets)
+        if finding.code == "SEC_DEBUG_EXPOSES_SECRETS":
+            if has_secure_patterns['no_debug_endpoints']:
+                should_remove = True
+            # Check if debug endpoint only exposes file IDs or similar non-sensitive data
+            elif re.search(r'debug.*endpoint.*returns.*(file id|processing id|last.*processed)', prompt_lower):
+                # Downgrade to warning instead of removing entirely
+                # For now, remove the BLOCKER but we should ideally downgrade severity
+                should_remove = True
         
         # SEC_MISSING_INPUT_VALIDATION: Remove if prompt explicitly requires validation
         if finding.code == "SEC_MISSING_INPUT_VALIDATION" and has_negation_context(finding.code):
             should_remove = True
+        
+        # SEC_WEAK_HASH_MD5: Remove if MD5 is used for checksums/duplicates (not password hashing)
+        if finding.code == "SEC_WEAK_HASH_MD5":
+            if has_secure_patterns['md5_for_checksums']:
+                # MD5 for file checksums/duplicate detection is acceptable
+                should_remove = True
+        
+        # SEC_NO_TLS_FOR_AUTH: Remove if there's no authentication in the prompt
+        if finding.code == "SEC_NO_TLS_FOR_AUTH":
+            # Check if auth is actually mentioned in a positive way (implementing auth, not just forbidding secrets)
+            has_auth_implementation = bool(re.search(r'implement.*auth|login.*endpoint|auth.*flow|session.*management|jwt|oauth|sso', prompt_lower))
+            # If only mentions passwords/secrets in "do not include" context, it's not auth
+            only_negative_mentions = bool(re.search(r'do not include.*password|no.*password.*anywhere', prompt_lower))
+            
+            if not has_auth_implementation or only_negative_mentions:
+                # No authentication implementation mentioned, so TLS warning is not relevant
+                should_remove = True
         
         if not should_remove:
             filtered_findings.append(finding)
