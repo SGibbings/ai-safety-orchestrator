@@ -1,0 +1,27 @@
+I'm updating our FastAPI-based financial profile API that processes employee payroll metadata and department allocations. The service will continue running behind our corporate HTTPS reverse proxy, and all secrets (JWT keys, DB URLs, encryption keys) come from environment variables.
+
+Changes being introduced:
+
+1. Logging Improvements:
+   - For each payroll update request, log: request_id, timestamp, department_id, and the last 4 characters of the employee's identifier to correlate anomalies.
+   - Do NOT log salaries, full employee IDs, names, emails, or SSNs.
+
+2. Operational Debug Endpoint:
+   - Add /debug/payroll-metrics that returns the 25 most recent payroll job IDs, processing duration (ms), retry_count, and whether the job was marked successful.
+   - Must not return raw data, employee identifiers, emails, salary values, or token-related metadata.
+   - This is restricted to the internal ops team only.
+
+3. Authentication and Authorization:
+   - The service trusts the "x-employee-id" header forwarded by our internal gateway to identify the acting user.
+   - No additional local verification is currently performed besides checking that the header exists.
+
+4. Data Handling:
+   - All salaries are encrypted at rest in PostgreSQL and decrypted only in business logic paths.
+   - No salary values are returned in any public-facing endpoints.
+   - Input validation is partially implemented; malformed payloads for payroll updates return a generic 400 error without specifying which field failed.
+
+5. Testing Plan:
+   - Only basic tests exist: successful payroll update, failure on invalid JWT, and calling /health.
+   - Testing around authorization, debug endpoints, and malformed payload scenarios is TBD.
+
+Describe how to design the controllers and logging layers to safely support these changes.

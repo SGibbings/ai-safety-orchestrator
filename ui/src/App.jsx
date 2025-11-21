@@ -481,63 +481,77 @@ function App() {
                 </div>
               )}
 
-              {/* 4. Security Analysis Summary */}
-              <div className="panel summary-panel">
-                <h2>Security Analysis Summary</h2>
-                <div className="summary-text">
-                  {getSecuritySummary(result.devspec_findings)}
+              {/* 4. Security Analysis - Merged Panel */}
+              <div className="panel security-analysis-panel">
+                <div className="panel-header">
+                  <h2>Security Analysis</h2>
+                  <span className="panel-subtitle">
+                    {result.devspec_findings.length === 0 
+                      ? 'No issues detected'
+                      : `${result.devspec_findings.length} issue${result.devspec_findings.length !== 1 ? 's' : ''} found`}
+                  </span>
                 </div>
-              </div>
 
-              {/* 5. Issues Found - Combined Box */}
-              <div className="panel issues-panel">
-                <h2>Issues Found</h2>
-                
-                {result.devspec_findings.length === 0 && (!result.guidance || result.guidance.length === 0) ? (
+                {result.devspec_findings.length === 0 ? (
                   <div className="no-issues">
-                    No security issues detected. The prompt is safe to use.
+                    <span className="success-icon">✓</span>
+                    <div className="no-issues-text">
+                      <strong>No security issues detected.</strong>
+                      <p>The prompt appears safe to use.</p>
+                    </div>
                   </div>
                 ) : (
-                  <div className="combined-issues-container">
-                    {/* Detected Issues Subsection */}
-                    {result.devspec_findings.length > 0 && (
-                      <div className="issues-subsection">
-                        <h3 className="subsection-title">Detected Issues</h3>
-                        <div className="issues-container">
-                          {['BLOCKER', 'ERROR', 'WARNING', 'INFO'].map(severity => {
-                            const findings = groupedFindings[severity];
-                            if (findings.length === 0) return null;
+                  <>
+                    {/* Security Summary */}
+                    <div className="security-summary">
+                      {getSecuritySummary(result.devspec_findings)}
+                    </div>
 
-                            return (
-                              <div key={severity} className="severity-group">
-                                <div className={`severity-header severity-${severity.toLowerCase()}`}>
-                                  <span className="severity-label">{severity}</span>
-                                  <span className="severity-count">({findings.length})</span>
-                                </div>
-                                
-                                <div className="findings-list">
-                                  {findings.map((finding, idx) => (
-                                    <div key={idx} className="finding-item">
-                                      <div className="finding-title">{getFriendlyIssueName(finding.code)}</div>
-                                      <div className="finding-code-badge">Code: {finding.code}</div>
-                                      <div className="finding-message">{finding.message}</div>
-                                      <div className="finding-suggestion">
-                                        <strong>Suggestion:</strong> {finding.suggestion}
-                                      </div>
+                    {/* Findings grouped by severity */}
+                    <div className="security-findings">
+                      {['BLOCKER', 'ERROR', 'WARNING', 'INFO'].map(severity => {
+                        const findings = groupedFindings[severity];
+                        if (findings.length === 0) return null;
+
+                        const severityLabels = {
+                          'BLOCKER': 'Blockers',
+                          'ERROR': 'Errors',
+                          'WARNING': 'Warnings',
+                          'INFO': 'Info'
+                        };
+
+                        return (
+                          <div key={severity} className="severity-group">
+                            <div className={`severity-header severity-${severity.toLowerCase()}`}>
+                              <span className="severity-label">{severityLabels[severity]}</span>
+                              <span className="severity-count">{findings.length}</span>
+                            </div>
+                            
+                            <div className="findings-list">
+                              {findings.map((finding, idx) => (
+                                <div key={idx} className={`finding-item finding-${severity.toLowerCase()}`}>
+                                  <div className="finding-header">
+                                    <div className="finding-title">{getFriendlyIssueName(finding.code)}</div>
+                                    <div className="finding-code">{finding.code}</div>
+                                  </div>
+                                  <div className="finding-message">{finding.message}</div>
+                                  {finding.suggestion && (
+                                    <div className="finding-suggestion">
+                                      <span className="suggestion-label">Recommendation:</span> {finding.suggestion}
                                     </div>
-                                  ))}
+                                  )}
                                 </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
 
-                    {/* Additional Guidance Subsection */}
+                    {/* Additional Guidance (if present) */}
                     {result.guidance && result.guidance.length > 0 && (
-                      <div className="issues-subsection">
-                        <h3 className="subsection-title">Additional Guidance</h3>
+                      <div className="additional-guidance">
+                        <div className="guidance-header">Additional Guidance</div>
                         <div className="guidance-list">
                           {result.guidance.map((item, idx) => (
                             <div key={idx} className="guidance-item">
@@ -548,7 +562,7 @@ function App() {
                         </div>
                       </div>
                     )}
-                  </div>
+                  </>
                 )}
               </div>
 

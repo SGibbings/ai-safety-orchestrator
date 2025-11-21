@@ -61,7 +61,8 @@ fi
 if grep -iqE 'return.*stack trace.*(response|api|client)' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "ERROR" "SEC_STACKTRACE_IN_RESPONSE" "Prompt suggests returning stack traces directly in API responses." "Never expose stack traces to clients; log them securely."
 fi
-if grep -iqE '(no need for authentication|no authentication required|no auth).*finance|transaction|payment|balance|bank' <<< "$NORMALIZED_PROMPT"; then
+# Financial operations without authentication - must have both "no auth" AND financial keywords
+if grep -iqE '(no need for authentication|no authentication required|no auth|skip.*auth).*(financ|transaction|payment|balance|bank|invoice|billing)' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "BLOCKER" "SEC_NO_AUTH_FINANCIAL" "Detected financial operation without authentication." "Require authentication for all financial endpoints."
 fi
 if grep -iqE 'adjust.*balance.*no validation' <<< "$NORMALIZED_PROMPT"; then
@@ -167,7 +168,12 @@ elif grep -iqE '/debug[^ ]*\s+(return|returns|show|shows|expose|exposes)\s+(all 
   add_warning "SECURITY" "WARNING" "SEC_DEBUG_EXPOSES_METADATA" "Prompt suggests a debug endpoint that exposes user IDs or filenames." "Minimize data exposure in debug endpoints and disable them in production."
 fi
 # No authentication on internal endpoints
-if grep -iqE 'no need.*(auth|authentication).*(internal|endpoint)|internal.*no.*(auth|authentication)|network.*secure.*enough' <<< "$NORMALIZED_PROMPT"; then
+# Very specific pattern: only trigger when explicitly saying "no auth" or "skip auth" on "internal endpoints"
+# Avoid false positives with gateway header trust scenarios (covered by SEC_TRUSTS_GATEWAY_HEADER)
+if grep -iqE '(no need for|skip|skipping|bypass).*(auth|authentication).*(on )?(internal|private).*endpoint' <<< "$NORMALIZED_PROMPT" \
+  || grep -iqE '(internal|private).*endpoint.*(no|without|skip).*(auth|authentication).*check' <<< "$NORMALIZED_PROMPT" \
+  || grep -iqE 'network.*(is )?(secure|safe).*enough.*(no|without|skip)' <<< "$NORMALIZED_PROMPT" \
+  || grep -iqE '(no|skip).*(auth|authentication).*(internal|private).*endpoint.*(network|firewall)' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "BLOCKER" "SEC_NO_AUTH_INTERNAL" "Prompt suggests skipping authentication on internal endpoints assuming network security." "Always require authentication; network-level security is insufficient."
 fi
 # GET endpoint for login/authentication
