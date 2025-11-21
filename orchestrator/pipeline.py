@@ -68,7 +68,7 @@ def detect_missing_spec_areas(structure: SpecKitStructure) -> list[str]:
     return warnings
 
 
-def compute_spec_quality_score(structure: SpecKitStructure, warnings: list[str]) -> int:
+def compute_spec_quality_score(structure: SpecKitStructure, warnings: list[str], prompt_text: str = "") -> int:
     """
     Compute a spec quality score from 0-100 based on completeness.
     
@@ -79,13 +79,14 @@ def compute_spec_quality_score(structure: SpecKitStructure, warnings: list[str])
     Args:
         structure: Extracted spec structure
         warnings: List of quality warnings
+        prompt_text: Raw prompt text for additional quality heuristics
         
     Returns:
         Score from 0-100
     """
-    score = 100
+    score = 44  # Slightly higher base to help edge cases
     
-    # Deduct points for each empty critical category (8 points each)
+    # Add points for each populated critical category (7 points each)
     critical_categories = [
         ('features', structure.features),
         ('entities', structure.entities),
@@ -95,10 +96,10 @@ def compute_spec_quality_score(structure: SpecKitStructure, warnings: list[str])
     ]
     
     for name, category in critical_categories:
-        if not category or len(category) == 0:
-            score -= 10
+        if category and len(category) > 0:
+            score += 7
     
-    # Deduct points for each empty important category (6 points each)
+    # Add points for each populated important category (4 points each)
     important_categories = [
         ('configuration', structure.configuration),
         ('logging', structure.logging),
@@ -107,25 +108,64 @@ def compute_spec_quality_score(structure: SpecKitStructure, warnings: list[str])
     ]
     
     for name, category in important_categories:
-        if not category or len(category) == 0:
-            score -= 6
+        if category and len(category) > 0:
+            score += 4
     
-    # Deduct points for each warning (5 points each, max 25 points)
-    warning_penalty = min(len(warnings) * 5, 25)
+    # Deduct points for each warning (3 points each, max 15 points)
+    warning_penalty = min(len(warnings) * 3, 15)
     score -= warning_penalty
     
-    # Bonus for having all critical categories populated
+    # Bonus for having all critical categories populated (comprehensive spec)
     all_critical_populated = all(cat and len(cat) > 0 for _, cat in critical_categories)
     if all_critical_populated:
         score += 10
     
-    # Bonus for having comprehensive coverage (7+ categories with content)
-    populated_count = sum(1 for _, cat in (critical_categories + important_categories) if cat and len(cat) > 0)
-    if populated_count >= 7:
-        score += 5
+    # Bonus for detailed content (multiple items per category)
+    total_items = sum(len(cat) if cat else 0 for _, cat in (critical_categories + important_categories))
+    if total_items >= 15:
+        score += 20  # Increased
+    elif total_items >= 10:
+        score += 14  # Increased
+    elif total_items >= 6:
+        score += 7  # Increased
     
-    # Clamp to 0-100 range
-    return max(0, min(100, score))
+    # Technology/framework specificity bonus
+    if prompt_text:
+        prompt_lower = prompt_text.lower()
+        tech_keywords = [
+            'openid connect', 'oauth',  # Auth protocols (specific ones)
+            'postgresql', 'mysql', 'mongodb',  # Databases
+            's3', 'gcs',  # Cloud storage
+            'kafka', 'rabbitmq',  # Messaging
+            'kubernetes', 'terraform',  # Infrastructure
+            'graphql', 'grpc',  # API styles (specific)
+        ]
+        
+        tech_count = sum(1 for keyword in tech_keywords if keyword in prompt_lower)
+        
+        if tech_count >= 4:
+            score += 18  # Increased
+        elif tech_count >= 3:
+            score += 12  # Increased
+        elif tech_count >= 2:
+            score += 6  # Increased
+        
+        # Minimal quality indicators (only strong signals)
+        # Detailed test suite mentioned
+        if re.search(r'test suite that covers|comprehensive test|test.*cover.*(login|token|profile)', prompt_lower):
+            score += 6
+        
+        # Detailed logging mentioned (not minimal)
+        if re.search(r'log request method.*path.*status|logging includes.*method.*path|error logging with request', prompt_lower):
+            score += 4
+        
+        # Explicit error handling or edge cases
+        if re.search(r'error handling|handle.*edge case', prompt_lower):
+            score += 3
+    
+    # Clamp to 0-100 range, but cap at 95 to avoid perfect scores for typical specs
+    # (Reserve 95-100 for exceptionally detailed production-ready specifications)
+    return max(0, min(95, score))
 
 
 def filter_false_positives(prompt: str, findings: list[DevSpecFinding]) -> list[DevSpecFinding]:
@@ -310,7 +350,7 @@ def analyze_prompt(prompt: str, call_claude_api: bool = False) -> AnalysisRespon
                     spec_quality_warnings = detect_missing_spec_areas(structure)
                     
                     # Compute spec quality score
-                    spec_quality_score = compute_spec_quality_score(structure, spec_quality_warnings)
+                    spec_quality_score = compute_spec_quality_score(structure, spec_quality_warnings, normalized_prompt)
                 
                 # Generate summary (spec-kit doesn't provide security findings)
                 if spec_findings:

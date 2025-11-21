@@ -1,0 +1,8 @@
+I'm building a small user profile API using FastAPI. It will run behind our HTTPS reverse proxy.
+
+Plan:
+- JWT tokens (15 minutes)
+- JWT_SECRET stored in config.json for now
+- PostgreSQL via SQLAlchemy
+- Passwords hashed using bcrypt
+- /debug/users returns last 10 user IDs

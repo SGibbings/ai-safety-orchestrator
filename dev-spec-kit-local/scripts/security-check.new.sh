@@ -28,7 +28,9 @@ fi
 if grep -iqE 'admin.*(auto-?create|regenerat|backdoor|without.*auth|no.*auth|hardcoded|hard-coded|default|built-in)|(hardcoded|hard-coded|default|built-in).*(admin.*user|admin.*account)' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "BLOCKER" "SEC_ADMIN_BACKDOOR" "Detected hardcoded, default, or unauthenticated admin user." "Require secure admin creation with strong authentication."
 fi
-if grep -iqE 'JWT.*file|token.*file|save.*token.*json|store.*token.*json' <<< "$NORMALIZED_PROMPT"; then
+# JWT/token storage in files - only flag if actually storing tokens in files, not just using JWT
+if grep -iqE '(save|store|write|persist).*(JWT|token).*(file|json.*file|\.json)|JWT.*(saved|stored|written).*(file|json)' <<< "$NORMALIZED_PROMPT" \
+  && ! grep -iqE 'JWT.*(access token|signing key|secret).*(environment|env var|config)|environment.*JWT|env var.*JWT' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "BLOCKER" "SEC_INSECURE_JWT_STORAGE" "Prompt suggests storing JWTs or tokens in a file (e.g., JSON)." "Use secure server-side storage or a proper session store."
 fi
 if grep -iqE 'wipe.*db|database.*wipe|reset.*db|regenerat.*admin.*restart' <<< "$NORMALIZED_PROMPT"; then
@@ -74,10 +76,15 @@ fi
 if grep -iqE "don['\"]?t use https|no https needed|no tls needed|behind a firewall.*no https" <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "BLOCKER" "SEC_EXPLICIT_NO_TLS" "Prompt explicitly disables HTTPS/TLS for sensitive services." "Always use HTTPS/TLS for all services, even behind firewalls."
 fi
-if grep -iqE "config\.json.*repo root.*secret|store.*secret.*config\.json" <<< "$NORMALIZED_PROMPT"; then
-  add_warning "SECURITY" "ERROR" "SEC_SECRETS_IN_CONFIG_FILE" "Prompt suggests storing secrets in config.json in the repo root." "Use environment variables or secret managers for secrets."
+# Secrets in config files (ERROR - should use env vars but not as bad as hardcoded in code)
+if grep -iqE "(secret|jwt_secret|api.*key|token).*(stored|store|in|from).*config\.json|config\.json.*(secret|jwt_secret|api.*key|token)" <<< "$NORMALIZED_PROMPT" \
+  && ! grep -iqE 'not.*config\.json|don'\''t.*config\.json|avoid.*config\.json' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "ERROR" "SEC_SECRETS_IN_CONFIG_FILE" "Prompt suggests storing secrets in config.json file." "Use environment variables or secret managers for secrets."
 fi
-if grep -iqE "/debug.*(dump|show|print).*(token|credential|connection string|env var|environment variable|password|session)" <<< "$NORMALIZED_PROMPT"; then
+# Debug endpoints dumping configuration or settings (BLOCKER)
+if grep -iqE "/debug.*(dump|dumps|show|shows|print|prints|return|returns).*(config|configuration|settings|django.*settings|app.*settings|env|environment)" <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "BLOCKER" "SEC_DEBUG_DUMPS_CONFIG" "Prompt suggests a /debug endpoint that dumps application configuration or settings." "Never expose configuration, settings, or environment variables in debug endpoints."
+elif grep -iqE "/debug.*(dump|show|print).*(token|credential|connection string|env var|environment variable|password|session)" <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "BLOCKER" "SEC_INSECURE_DEBUG_ENDPOINT" "Prompt suggests a /debug endpoint that dumps tokens, credentials, or environment variables." "Never expose sensitive data in debug endpoints."
 fi
 if grep -iqE "kafka.*rabbitmq.*redis|rabbitmq.*kafka.*redis|redis.*kafka.*rabbitmq" <<< "$NORMALIZED_PROMPT"; then
@@ -98,6 +105,16 @@ fi
 # Plain text password storage
 if grep -iqE 'plain.?text.*password|password.*plain.?text|store.*password.*(unencrypted|raw|directly)|save.*password.*(plain|clear)' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "BLOCKER" "SEC_PLAINTEXT_PASSWORDS" "Prompt suggests storing passwords in plain text." "Always hash passwords with bcrypt, Argon2, or PBKDF2 before storage."
+fi
+# Logging passwords (raw/plaintext)
+if grep -iqE 'log.*(raw|plaintext|actual|plain text|clear text).*(password|credentials)|log.*(request payload|request body|full request).*(password|credentials)' <<< "$NORMALIZED_PROMPT" \
+  || grep -iqE '(password|credentials).*(log|logged|logging).*(raw|plaintext|plain text|clear|request payload)' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "BLOCKER" "SEC_LOGS_PASSWORDS" "Prompt suggests logging raw/plaintext passwords." "Never log passwords or credentials; log only sanitized request metadata."
+fi
+# Logging PII (emails, names, etc.) - ERROR severity
+if grep -iqE 'log.*(email address|user.*email|customer.*email)|email.*(logged|log|logging)' <<< "$NORMALIZED_PROMPT" \
+  && ! grep -iqE 'do not log.*email|never log.*email|avoid logging.*email|without.*email' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "ERROR" "SEC_LOGS_PII_EMAIL" "Prompt suggests logging user email addresses (PII)." "Avoid logging PII; use anonymized identifiers or pseudonymized data for debugging."
 fi
 # Hardcoded secrets/credentials (only if NOT using env vars or secret management)
 if grep -iqE 'hardcode.*(secret|key|password|token|credential)|secret.*["\x27][a-zA-Z0-9_-]{6,}["\x27]|jwt.*secret.*["\x27]|api.*key.*["\x27]' <<< "$NORMALIZED_PROMPT" \
@@ -132,7 +149,15 @@ if grep -iqE '/debug[^ ]*\s+(return|returns|show|shows|expose|exposes|dump|dumps
 elif grep -iqE '/debug[^ ]*\s+(return|returns|show|shows|expose|exposes)\s+(all |the |last [0-9]+ )?email' <<< "$NORMALIZED_PROMPT" \
   || grep -iqE 'debug.*(return|returns|show|shows|expose|exposes)\s+(all |the |last [0-9]+ )?email' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "ERROR" "SEC_DEBUG_EXPOSES_PII" "Prompt suggests a debug endpoint that exposes emails (PII)." "Never expose personally identifiable information in debug endpoints."
-# Debug endpoint exposing non-sensitive metadata (IDs, filenames) - WARNING only
+# Debug endpoint exposing large amounts of metadata (100+) - BLOCKER (significant data leak)
+elif grep -iqE '/debug[^ ]*\s+(return|returns|show|shows|expose|exposes)\s+.{0,50}(last |all )?([1-9][0-9]{2,})\+?\s+(user|id|filename|file.*name|record|upload)' <<< "$NORMALIZED_PROMPT" \
+  || grep -iqE 'debug.*(return|returns|show|shows|expose|exposes).{0,50}(for )?(last |all )?([1-9][0-9]{2,})\+?\s+(user|id|filename|file.*name|record|upload)' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "BLOCKER" "SEC_DEBUG_EXPOSES_BULK_DATA" "Prompt suggests a debug endpoint that exposes large amounts of user data (100+ records)." "Never expose bulk user data in debug endpoints; this is a significant data leak risk."
+# Debug endpoint exposing moderate amounts of metadata (50-99) - ERROR
+elif grep -iqE '/debug[^ ]*\s+(return|returns|show|shows|expose|exposes)\s+.{0,50}(last |all )?([5-9][0-9])\+?\s+(user|id|filename|file.*name|record|upload)' <<< "$NORMALIZED_PROMPT" \
+  || grep -iqE 'debug.*(return|returns|show|shows|expose|exposes).{0,50}(for )?(last |all )?([5-9][0-9])\+?\s+(user|id|filename|file.*name|record|upload)' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "ERROR" "SEC_DEBUG_EXPOSES_BULK_METADATA" "Prompt suggests a debug endpoint that exposes moderate amounts of user data (50-99 records)." "Minimize data exposure in debug endpoints; use proper admin interfaces with authentication."
+# Debug endpoint exposing small amounts of metadata (IDs, filenames) - WARNING only
 elif grep -iqE '/debug[^ ]*\s+(return|returns|show|shows|expose|exposes)\s+(all |the |last [0-9]+ )?(user|id|filename|file.*name)' <<< "$NORMALIZED_PROMPT" \
   || grep -iqE 'debug.*(return|returns|show|shows|expose|exposes)\s+(all |the |last [0-9]+ )?(user|id|filename|file.*name)' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "WARNING" "SEC_DEBUG_EXPOSES_METADATA" "Prompt suggests a debug endpoint that exposes user IDs or filenames." "Minimize data exposure in debug endpoints and disable them in production."

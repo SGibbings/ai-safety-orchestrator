@@ -1,0 +1,11 @@
+I'm optimizing the user profile API in FastAPI.
+
+Changes:
+- Instead of bcrypt, I want to hash passwords using SHA-256 with a per-user salt to simplify deployment.
+- Everything else stays the same:
+  - Secrets from env vars,
+  - PostgreSQL + SQLAlchemy,
+  - JWT access tokens with 20-minute expiry,
+  - /health endpoint with basic status.
+
+Explain how to implement this change and any tradeoffs.

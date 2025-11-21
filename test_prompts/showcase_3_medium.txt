@@ -1,0 +1,6 @@
+Authentication service in Go.
+
+- Users stored in PostgreSQL
+- Passwords hashed using SHA-256 + salt
+- Issue JWTs (20-minute expiry)
+- /health endpoint

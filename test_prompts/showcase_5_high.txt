@@ -1,0 +1,7 @@
+File upload service in Flask.
+
+- OpenID Connect for auth
+- Files stored in S3
+- Metadata in PostgreSQL
+- Error logging with request IDs
+- /debug/file-stats shows file names + sizes for last 100 uploads

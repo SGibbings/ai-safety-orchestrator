@@ -1,0 +1,12 @@
+I'm designing the first version of a user profile API using FastAPI for internal employees. It will run behind our corporate HTTPS reverse proxy.
+
+Requirements:
+- Use JWT access tokens with 20-minute expiration.
+- Load all secrets (JWT signing key, database URL) strictly from environment variables.
+- Store users in PostgreSQL using SQLAlchemy ORM.
+- Hash passwords with bcrypt.
+- Expose a /health endpoint that only returns status information, no config or secrets.
+- Log request method, path, and response status code.
+- Add a small test suite that covers login, token verification, and profile retrieval.
+
+Give me a high-level architecture for this service.

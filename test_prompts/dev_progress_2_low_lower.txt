@@ -1,0 +1,11 @@
+I'm updating my user profile API in FastAPI. It still runs behind our HTTPS reverse proxy.
+
+Current plan:
+- JWT access tokens (20 minutes).
+- Secrets come from environment variables.
+- Users in PostgreSQL via SQLAlchemy.
+- Passwords hashed with bcrypt.
+- I'm not going to worry about tests yet; I'll add those later.
+- Logging can be minimal for now.
+
+Outline the updated architecture.

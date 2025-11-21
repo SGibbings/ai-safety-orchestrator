@@ -1,0 +1,7 @@
+Task management microservice in Node.js with Express.
+
+- Bearer tokens validated at gateway
+- Tasks stored in MongoDB
+- CRUD endpoints
+- Basic request logging
+- Filtering tasks by user ID

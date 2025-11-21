@@ -1,0 +1,15 @@
+I'm adding some debugging features to my user profile API in FastAPI to make ops easier.
+
+Debug plan:
+- Add a /debug/config endpoint that returns current configuration values so I can see what the service is running with in each environment.
+- Add a /debug/users endpoint that returns the last 100 user emails and IDs.
+- I'm going to temporarily skip tests while I iterate quickly on these changes.
+
+Everything else remains:
+- HTTPS via reverse proxy,
+- JWT tokens,
+- secrets from environment variables,
+- PostgreSQL + SQLAlchemy,
+- bcrypt.
+
+Explain how to wire these debug endpoints into the API.

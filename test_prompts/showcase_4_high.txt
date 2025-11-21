@@ -1,0 +1,5 @@
+Admin dashboard API in Django REST Framework.
+
+- Django sessions for auth
+- /debug/config dumps Django settings
+- CRUD on employee records
