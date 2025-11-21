@@ -37,3 +37,4 @@ class AnalysisResponse(BaseModel):
     exit_code: int = Field(default=0, description="Exit code from dev-spec-kit script")
     has_blockers: bool = Field(default=False, description="Whether any BLOCKER issues were found")
     has_errors: bool = Field(default=False, description="Whether any ERROR issues were found")
+    risk_level: str = Field(default="Low", description="Overall risk level: Low, Medium, or High")
