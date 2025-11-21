@@ -1,0 +1,1 @@
+Service trusts the x-user-id header passed in by gateway.

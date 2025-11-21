@@ -157,6 +157,10 @@ elif grep -iqE '/debug[^ ]*\s+(return|returns|show|shows|expose|exposes)\s+.{0,5
 elif grep -iqE '/debug[^ ]*\s+(return|returns|show|shows|expose|exposes)\s+.{0,50}(last |all )?([5-9][0-9])\+?\s+(user|id|filename|file.*name|record|upload)' <<< "$NORMALIZED_PROMPT" \
   || grep -iqE 'debug.*(return|returns|show|shows|expose|exposes).{0,50}(for )?(last |all )?([5-9][0-9])\+?\s+(user|id|filename|file.*name|record|upload)' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "ERROR" "SEC_DEBUG_EXPOSES_BULK_METADATA" "Prompt suggests a debug endpoint that exposes moderate amounts of user data (50-99 records)." "Minimize data exposure in debug endpoints; use proper admin interfaces with authentication."
+# Debug endpoint exposing small-to-moderate amounts (10-49) - ERROR (privacy risk)
+elif grep -iqE '/debug[^ ]*\s+(return|returns|show|shows|expose|exposes)\s+.{0,50}(last |all )?([1-4][0-9])\+?\s+(user|id|filename|file.*name|record|upload)' <<< "$NORMALIZED_PROMPT" \
+  || grep -iqE 'debug.*(return|returns|show|shows|expose|exposes).{0,50}(for )?(last |all )?([1-4][0-9])\+?\s+(user|id|filename|file.*name|record|upload)' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "ERROR" "SEC_DEBUG_EXPOSES_MULTIPLE_IDS" "Prompt suggests a debug endpoint that exposes multiple user IDs (10-49 records)." "Debug endpoints should not expose user data even in small batches; use proper admin interfaces with authentication."
 # Debug endpoint exposing small amounts of metadata (IDs, filenames) - WARNING only
 elif grep -iqE '/debug[^ ]*\s+(return|returns|show|shows|expose|exposes)\s+(all |the |last [0-9]+ )?(user|id|filename|file.*name)' <<< "$NORMALIZED_PROMPT" \
   || grep -iqE 'debug.*(return|returns|show|shows|expose|exposes)\s+(all |the |last [0-9]+ )?(user|id|filename|file.*name)' <<< "$NORMALIZED_PROMPT"; then
@@ -169,6 +173,12 @@ fi
 # GET endpoint for login/authentication
 if grep -iqE '(get|GET).*endpoint.*(login|auth)|login.*(get|GET).*endpoint' <<< "$NORMALIZED_PROMPT"; then
   add_warning "SECURITY" "ERROR" "SEC_GET_FOR_AUTH" "Prompt suggests using GET for login/authentication endpoints." "Use POST for authentication to prevent credentials in URLs and logs."
+fi
+# Trusting gateway/proxy headers without verification
+if grep -iqE '(trust|trusts|use).*(x-user-id|x-authenticated-user|x-forwarded-user|x-auth-user|gateway.*header|proxy.*header)' <<< "$NORMALIZED_PROMPT" \
+  || grep -iqE '(service|endpoint).*(trust|trusts|accept|accepts|use|uses).*(header|x-).*(?:passed|provided|sent).*(by gateway|by proxy|from gateway|from proxy)' <<< "$NORMALIZED_PROMPT" \
+  || grep -iqE '(x-user-id|x-authenticated-user|x-forwarded-user).*(passed|provided|sent).*(by gateway|by proxy|from gateway|from proxy)' <<< "$NORMALIZED_PROMPT"; then
+  add_warning "SECURITY" "ERROR" "SEC_TRUSTS_GATEWAY_HEADER" "Prompt suggests trusting user identity headers from gateway/proxy without verification." "Validate gateway headers with shared secrets or mutual TLS; untrusted headers enable impersonation attacks."
 fi
 
 # --- Output ---

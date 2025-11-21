@@ -1,0 +1,1 @@
+Logging can be minimal for now and tests will be added later.

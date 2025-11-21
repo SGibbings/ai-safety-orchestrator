@@ -1,0 +1,6 @@
+I'm refining the user profile API in FastAPI. It's still only for internal employees and behind HTTPS.
+
+Updated behavior:
+- JWT access tokens (20 minutes), secrets from env vars.
+- PostgreSQL with SQLAlchemy, bcrypt for passwords.
+- When users sign in, I want to log the email address and whether the login succeeded or failed.

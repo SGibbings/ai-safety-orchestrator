@@ -1,0 +1,1 @@
+I'm optimizing the user profile API. I want to hash passwords using SHA-256 with a per-user salt.
