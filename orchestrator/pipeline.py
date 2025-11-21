@@ -28,7 +28,7 @@ def filter_false_positives(prompt: str, findings: list[DevSpecFinding]) -> list[
     # Build a profile of security best practices mentioned in the prompt
     has_secure_patterns = {
         'env_vars': bool(re.search(r'environment variables|env vars?|\.env\s*file', prompt_lower)) and 
-                    bool(re.search(r'never.*code|not.*checked.*into|config.*not.*source|do not include', prompt_lower)),
+                    bool(re.search(r'never.*code|not.*checked.*into|config.*not.*source|do not include|loaded strictly from', prompt_lower)),
         'hashing': bool(re.search(r'hash.*bcrypt|bcrypt|argon2|pbkdf2|scrypt', prompt_lower)),
         'https': bool(re.search(r'https|tls|ssl|secure.*connection', prompt_lower)),
         'validation': bool(re.search(r'input validation|validate.*input|pydantic|sanitize', prompt_lower)),
@@ -36,7 +36,7 @@ def filter_false_positives(prompt: str, findings: list[DevSpecFinding]) -> list[
         'no_plaintext_passwords': bool(re.search(r'never.*plain.*text.*password|hash.*password', prompt_lower)),
         'no_debug_endpoints': bool(re.search(r'do not.*debug|never.*debug.*endpoint|no debug endpoint', prompt_lower)),
         'no_passwords_anywhere': bool(re.search(r'do not include.*(password|secret)|no.*(password|secret).*anywhere', prompt_lower)),
-        'md5_for_checksums': bool(re.search(r'md5.*checksum|md5.*duplicate', prompt_lower)),
+        'md5_for_checksums': bool(re.search(r'md5.*(checksum|duplicate|simple|lightweight)|md5.*not.*password|md5.*not.*auth|md5.*not.*token', prompt_lower)),
     }
     
     # Detect negation patterns (e.g., "do NOT expose", "never log", "skip validation")
@@ -56,16 +56,34 @@ def filter_false_positives(prompt: str, findings: list[DevSpecFinding]) -> list[
         should_remove = False
         
         # SEC_HARDCODED_SECRET: Remove if prompt explicitly mentions using env vars/config files
-        if finding.code == "SEC_HARDCODED_SECRET" and has_secure_patterns['env_vars']:
-            # Check if the prompt is actually recommending hardcoding or just mentioning it to avoid it
-            if not re.search(r'use.*["\']\w+["\']|hardcode.*["\']\w+["\']|secret.*=.*["\']', prompt_lower):
+        if finding.code == "SEC_HARDCODED_SECRET":
+            if has_secure_patterns['env_vars']:
+                # Check if the prompt is actually recommending hardcoding or just mentioning it to avoid it
+                if not re.search(r'use.*["\']\w+["\']|hardcode.*["\']\w+["\']|secret.*=.*["\']', prompt_lower):
+                    should_remove = True
+            # Also remove if prompt explicitly says "none of these should be hardcoded" or "should not be hardcoded"
+            elif re.search(r'(none|should not|must not).*(be )?hardcoded', prompt_lower):
                 should_remove = True
         
         # SEC_INSECURE_JWT_STORAGE: Remove if prompt mentions secure storage patterns
-        if finding.code == "SEC_INSECURE_JWT_STORAGE" and has_secure_patterns['env_vars']:
-            # Check if it's actually suggesting insecure storage or just mentioning config files for other purposes
-            if not re.search(r'save.*token.*file|store.*jwt.*json|token.*in.*file', prompt_lower):
+        if finding.code == "SEC_INSECURE_JWT_STORAGE":
+            # Check if prompt explicitly says it's NOT about JWT/token storage
+            not_about_tokens = bool(re.search(r'not related to.*(token|jwt)|this is not.*(token|jwt)', prompt_lower))
+            
+            if not_about_tokens:
                 should_remove = True
+            elif has_secure_patterns['env_vars']:
+                # Check if it's actually suggesting insecure storage or just mentioning config files for other purposes
+                # Use more specific patterns to avoid false matches
+                actually_stores_tokens = bool(re.search(r'store (jwt|token) (in|to) (file|json)|save (jwt|token) (in|to) (file|json)', prompt_lower))
+                if not actually_stores_tokens:
+                    should_remove = True
+            # Also check if "JSON" refers to user profile data, not JWT storage
+            elif re.search(r'profile json|user.*json|data.*json', prompt_lower):
+                # Check it's not about storing JWTs - look for specific patterns
+                stores_jwt = bool(re.search(r'store.{0,20}jwt|jwt.{0,20}(file|storage)', prompt_lower))
+                if not stores_jwt:
+                    should_remove = True
         
         # SEC_PLAINTEXT_PASSWORDS: Remove if prompt explicitly mentions password hashing OR says no passwords anywhere
         if finding.code == "SEC_PLAINTEXT_PASSWORDS":
@@ -77,10 +95,11 @@ def filter_false_positives(prompt: str, findings: list[DevSpecFinding]) -> list[
         if finding.code == "SEC_DEBUG_EXPOSES_SECRETS":
             if has_secure_patterns['no_debug_endpoints']:
                 should_remove = True
-            # Check if debug endpoint only exposes file IDs or similar non-sensitive data
-            elif re.search(r'debug.*endpoint.*returns.*(file id|processing id|last.*processed)', prompt_lower):
-                # Downgrade to warning instead of removing entirely
-                # For now, remove the BLOCKER but we should ideally downgrade severity
+            # Check if debug/diagnostics endpoint explicitly should NOT return secrets
+            elif re.search(r'(debug|diagnostic).*should not return.*(secret|sensitive|environment)', prompt_lower):
+                should_remove = True
+            # Check if debug endpoint only exposes file IDs or update IDs (non-sensitive data)
+            elif re.search(r'(debug|diagnostic).*endpoint.*returns.*(file id|processing id|update id|last.*id|numerical id)', prompt_lower):
                 should_remove = True
         
         # SEC_MISSING_INPUT_VALIDATION: Remove if prompt explicitly requires validation
@@ -102,6 +121,17 @@ def filter_false_positives(prompt: str, findings: list[DevSpecFinding]) -> list[
             
             if not has_auth_implementation or only_negative_mentions:
                 # No authentication implementation mentioned, so TLS warning is not relevant
+                should_remove = True
+        
+        # SEC_NO_AUTH_INTERNAL: Remove if prompt acknowledges security boundaries appropriately
+        if finding.code == "SEC_NO_AUTH_INTERNAL":
+            # Check if the prompt is actually suggesting to skip auth, or just describing an internal service
+            # that receives data from authenticated upstream services
+            suggests_skip_auth = bool(re.search(r'skip.*auth|no.*auth.*needed|without.*auth|assume.*trusted', prompt_lower))
+            describes_internal_boundaries = bool(re.search(r'internal.*service|internal.*tool|receives.*from.*microservice', prompt_lower))
+            
+            if describes_internal_boundaries and not suggests_skip_auth:
+                # It's describing service boundaries, not suggesting to skip authentication
                 should_remove = True
         
         if not should_remove:
